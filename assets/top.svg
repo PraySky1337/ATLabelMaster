@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="151mm"
+   height="151.00002mm"
+   viewBox="0 0 151 151.00002"
+   version="1.1"
+   id="svg5"
+   xml:space="preserve"
+   inkscape:export-filename="位图.svg"
+   inkscape:export-xdpi="25.4"
+   inkscape:export-ydpi="25.4"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><sodipodi:namedview
+     id="namedview7"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false" /><defs
+     id="defs2" /><g
+     inkscape:label="图层 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0.50000001,0.50000005)"><path
+       style="fill:none;stroke:#00ff00;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+       d="m 150,0 h -30 v 30 h 30 z"
+       id="path1080"
+       sodipodi:nodetypes="ccccc" /><path
+       style="fill:none;stroke:#00ff00;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+       d="m 1e-5,0 v 30 h 10 V 10 H 30 V 0 Z"
+       id="path1080-3"
+       sodipodi:nodetypes="ccccccc" /><path
+       style="fill:none;stroke:#00ff00;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+       d="m 150,150 v -30 h -10 v 20 h -20 v 10 z"
+       id="path1080-9"
+       sodipodi:nodetypes="ccccccc" /><path
+       style="fill:none;stroke:#00ff00;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"
+       d="M 30,120 H 0 c 0,10 0,20 0,30 10,0 20,0 30,0 z"
+       id="path1080-5"
+       sodipodi:nodetypes="ccccc" /></g></svg>
