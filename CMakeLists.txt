@@ -16,7 +16,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
 file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
     ${SRC_PATH}/*.cpp
-    ${SRC_PATH}/*.h
+    ${SRC_PATH}/*.hpp
     ${SRC_PATH}/*.ui
 )
 

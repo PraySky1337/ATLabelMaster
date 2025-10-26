@@ -30,7 +30,7 @@
     <item>
      <widget class="QFrame" name="left_frame">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -134,16 +134,15 @@
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="auto_save">
-         <property name="text">
-          <string>自动保存</string>
+        <widget class="QPushButton" name="pushButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QCheckBox" name="auto_smart_check">
          <property name="text">
-          <string>自动智能标注</string>
+          <string>设置</string>
          </property>
         </widget>
        </item>
@@ -185,7 +184,7 @@
         </spacer>
        </item>
        <item>
-        <widget class="QLabel" name="label">
+        <widget class="ImageCanvas" name="label">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -264,6 +263,13 @@
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ImageCanvas</class>
+   <extends>QLabel</extends>
+   <header>ui/image_canvas.hpp</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
