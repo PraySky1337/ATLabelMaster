@@ -47,7 +47,8 @@
 	  	"twxs.cmake",
 	  	// Git enhancements
 	  	"mhutchie.git-graph",
-        "ms-vscode.cmake-tools"
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools"
 	  ]
     }
   }

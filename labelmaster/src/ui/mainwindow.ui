@@ -6,24 +6,18 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1511</width>
-    <height>982</height>
+    <width>1840</width>
+    <height>1101</height>
    </rect>
   </property>
   <property name="acceptDrops">
-   <bool>false</bool>
+   <bool>true</bool>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
-  </property>
-  <property name="tabShape">
-   <enum>QTabWidget::Rounded</enum>
+   <string>ATLabelMaster</string>
   </property>
   <property name="dockNestingEnabled">
    <bool>true</bool>
-  </property>
-  <property name="unifiedTitleAndToolBarOnMac">
-   <bool>false</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -35,6 +29,18 @@
         <verstretch>0</verstretch>
        </sizepolicy>
       </property>
+      <property name="minimumSize">
+       <size>
+        <width>200</width>
+        <height>960</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>240</width>
+        <height>960</height>
+       </size>
+      </property>
       <property name="frameShape">
        <enum>QFrame::StyledPanel</enum>
       </property>
@@ -43,13 +49,29 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QPushButton" name="open_folder_button">
+        <widget class="QListView" name="list_view">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>400</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="open_folder_button">
          <property name="text">
           <string>打开文件夹</string>
          </property>
@@ -57,12 +79,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="smart_button">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>智能标注</string>
          </property>
@@ -70,12 +86,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="previous_button">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>上一张(Q)</string>
          </property>
@@ -83,12 +93,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="next_pic">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>下一张(E)</string>
          </property>
@@ -96,12 +100,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="histogram_button">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>直方图均衡化</string>
          </property>
@@ -110,10 +108,16 @@
        <item>
         <widget class="QPushButton" name="delete_button">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>0</height>
+          </size>
          </property>
          <property name="text">
           <string>删除图片</string>
@@ -122,12 +126,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="save_button">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>保存标注</string>
          </property>
@@ -135,12 +133,6 @@
        </item>
        <item>
         <widget class="QPushButton" name="pushButton">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="text">
           <string>设置</string>
          </property>
@@ -159,8 +151,8 @@
       </property>
       <property name="minimumSize">
        <size>
-        <width>640</width>
-        <height>480</height>
+        <width>1280</width>
+        <height>960</height>
        </size>
       </property>
       <property name="frameShape">
@@ -171,7 +163,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <spacer name="spacer_upper">
+        <spacer name="spacer_lower">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -185,23 +177,14 @@
        </item>
        <item>
         <widget class="ImageCanvas" name="label">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
          <property name="minimumSize">
           <size>
-           <width>640</width>
-           <height>480</height>
+           <width>1280</width>
+           <height>960</height>
           </size>
          </property>
          <property name="styleSheet">
-          <string notr="true">QLabel {
-    border: 1px solid gray;
-    border-radius: 3px;
-}</string>
+          <string notr="true">QLabel { border: 1px solid gray; border-radius: 3px; }</string>
          </property>
          <property name="text">
           <string>no-img</string>
@@ -209,7 +192,7 @@
         </widget>
        </item>
        <item>
-        <spacer name="spacer_lower">
+        <spacer name="spacer_upper">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -234,27 +217,17 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
        <item>
-        <widget class="QDateTimeEdit" name="data_time"/>
-       </item>
-       <item>
         <widget class="QTextEdit" name="log_text">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+         <property name="minimumSize">
+          <size>
+           <width>300</width>
+           <height>0</height>
+          </size>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QTreeView" name="file_tree_view">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-        </widget>
+        <widget class="QTreeView" name="file_tree_view"/>
        </item>
       </layout>
      </widget>
@@ -262,6 +235,109 @@
    </layout>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1840</width>
+     <height>39</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>文件(&amp;F)</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionDelete"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>编辑(&amp;E)</string>
+    </property>
+    <addaction name="actionPrev"/>
+    <addaction name="actionNext"/>
+    <addaction name="actionHistEq"/>
+    <addaction name="actionSmart"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>工具(&amp;T)</string>
+    </property>
+    <addaction name="actionSettings"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuTools"/>
+  </widget>
+  <action name="actionOpen">
+   <property name="text">
+    <string>打开</string>
+   </property>
+   <property name="toolTip">
+    <string>打开文件夹</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>保存</string>
+   </property>
+   <property name="toolTip">
+    <string>保存标注</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionPrev">
+   <property name="text">
+    <string>上一张</string>
+   </property>
+   <property name="shortcut">
+    <string>Q</string>
+   </property>
+  </action>
+  <action name="actionNext">
+   <property name="text">
+    <string>下一张</string>
+   </property>
+   <property name="shortcut">
+    <string>E</string>
+   </property>
+  </action>
+  <action name="actionHistEq">
+   <property name="text">
+    <string>直方图均衡化</string>
+   </property>
+   <property name="shortcut">
+    <string>H</string>
+   </property>
+  </action>
+  <action name="actionDelete">
+   <property name="text">
+    <string>删除图片</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionSmart">
+   <property name="text">
+    <string>智能标注</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
+   </property>
+  </action>
+  <action name="actionSettings">
+   <property name="text">
+    <string>设置</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

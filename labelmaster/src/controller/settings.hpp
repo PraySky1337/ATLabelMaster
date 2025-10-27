@@ -1,8 +1,8 @@
 #pragma once
 #include <QSettings>
 #include <QString>
-#include <utility>
 
+namespace controller {
 /// Lightweight typed wrapper around QSettings.
 /// Usage:
 ///   AppSettings::initOrgApp("ATLabelMaster","ATLabelMaster");
@@ -77,3 +77,4 @@ private:
     // Otherwise, we use the org/app ctor.
     static QScopedPointer<QSettings> s_iniOverride_;
 };
+}

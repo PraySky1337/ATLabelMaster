@@ -1,10 +1,11 @@
-#include "app_settings.hpp"
+#include "settings.hpp"
 #include <QCoreApplication>
-#include <QFileInfo>
 #include <QDir>
-#include <QStandardPaths>
+#include <QFileInfo>
 #include <QScopedPointer>
+#include <QStandardPaths>
 
+namespace controller {
 QScopedPointer<QSettings> AppSettings::s_iniOverride_;
 
 void AppSettings::initOrgApp(const QString& org, const QString& app) noexcept {
@@ -27,17 +28,15 @@ AppSettings& AppSettings::instance() noexcept {
 
 AppSettings::AppSettings()
     // If ini override exists, duplicate its format/path; else default org/app.
-    : settings_(s_iniOverride_ ? QSettings(s_iniOverride_->fileName(), s_iniOverride_->format())
-                               : QSettings())
-{
+    : settings_(
+          s_iniOverride_ ? QSettings(s_iniOverride_->fileName(), s_iniOverride_->format())
+                         : QSettings()) {
     // Avoid reading system defaults etc. if you want only our namespace.
     settings_.setFallbacksEnabled(true); // keep default true; set false if you dislike fallbacks
 }
 
 /* ---------- dataset paths ---------- */
-QString AppSettings::saveDir() const noexcept {
-    return settings_.value(Keys::kSaveDir).toString();
-}
+QString AppSettings::saveDir() const noexcept { return settings_.value(Keys::kSaveDir).toString(); }
 AppSettings& AppSettings::setSaveDir(const QString& d) {
     settings_.setValue(Keys::kSaveDir, d);
     return *this;
@@ -69,23 +68,18 @@ AppSettings& AppSettings::setFixedRoi(bool v) {
     return *this;
 }
 
-int AppSettings::roiW() const noexcept {
-    return settings_.value(Keys::kRoiW, Def::kRoiW).toInt();
-}
+int AppSettings::roiW() const noexcept { return settings_.value(Keys::kRoiW, Def::kRoiW).toInt(); }
 AppSettings& AppSettings::setRoiW(int w) {
     settings_.setValue(Keys::kRoiW, w);
     return *this;
 }
 
-int AppSettings::roiH() const noexcept {
-    return settings_.value(Keys::kRoiH, Def::kRoiH).toInt();
-}
+int AppSettings::roiH() const noexcept { return settings_.value(Keys::kRoiH, Def::kRoiH).toInt(); }
 AppSettings& AppSettings::setRoiH(int h) {
     settings_.setValue(Keys::kRoiH, h);
     return *this;
 }
 
 /* ---------- sync ---------- */
-void AppSettings::sync() noexcept {
-    settings_.sync();
-}
+void AppSettings::sync() noexcept { settings_.sync(); }
+} // namespace controller

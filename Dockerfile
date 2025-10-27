@@ -7,7 +7,9 @@ SHELL ["/bin/bash", "-c"]
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential cmake git wget curl vim \
     qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
-    libgl1-mesa-dev xcb libx11-xcb-dev libopencv-dev \
+    libgl1-mesa-dev xcb libx11-xcb-dev \
+    libopencv-dev \
+    libeigen3-dev \ 
     # LLVM install dep
     gnupg lsb-release ca-certificates \ 
     # sudo 和 中文字体 (否则 QT ui不显示)

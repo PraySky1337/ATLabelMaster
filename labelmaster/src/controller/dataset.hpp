@@ -1,7 +1,9 @@
-// dataset_manager.hpp
 #pragma once
+#include <QFileSystemModel>
+// dataset_manager.hpp
 #include <QString>
 
+namespace controller {
 class DatasetManager {
 public:
     static DatasetManager& instance();
@@ -20,9 +22,10 @@ public:
 
 private:
     DatasetManager();
-    QString cfgPath() const; // ~/.atlabelmaster/config.json
+    QString cfgPath() const;  // ~/.atlabelmaster/config.json
 
     // 内部状态缓存
     QString saveDir_;
     QString imageDir_;
 };
+} // namespace controller

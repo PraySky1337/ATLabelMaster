@@ -1,18 +1,23 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Debug controller_node",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "/bin/bash",
-            "args": [
-                "-c",
-                "source /opt/ros/humble/setup.bash && source ${workspaceFolder}/install/setup.bash && exec ${workspaceFolder}/install/solver/lib/solver/controller_node"
-            ],
-            "cwd": "${workspaceFolder}",
-            "MIMode": "gdb",
-            "miDebuggerPath": "/usr/bin/gdb"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "CMake Launch (gdb)",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${command:cmake.launchTargetPath}",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${command:cmake.getLaunchTargetDirectory}",
+      "environment": [
+        { "name": "QT_DEBUG_PLUGINS", "value": "0" }
+      ],
+      "console": "integratedTerminal",
+      "MIMode": "gdb",
+      "miDebuggerPath": "/usr/bin/gdb",
+      "setupCommands": [
+        { "text": "-enable-pretty-printing" }
+      ]
+    }
+  ]
 }
