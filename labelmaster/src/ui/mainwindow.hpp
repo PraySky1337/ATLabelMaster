@@ -1,9 +1,9 @@
 #pragma once
 #include <QMainWindow>
 #include <memory>
+#include "ui_mainwindow.h"
 
 QT_BEGIN_NAMESPACE
-namespace Ui { class MainWindow; }
 class QAbstractItemModel;
 class QModelIndex;
 class QImage;
@@ -25,6 +25,7 @@ public:
     // —— 配置项（可选）——
     void enableDragDrop(bool on = true);
     void setLogTimestampEnabled(bool on = true);
+    auto ui() { return ui_.get(); }
 
 signals:
     // —— 用户输出（语义化）——
@@ -36,13 +37,16 @@ signals:
     void sigDeleteRequested();
     void sigSmartAnnotateRequested();
     void sigSettingsRequested();
-    void sigAnnotateRequested();
     void sigFileActivated(const QModelIndex&);
     void sigDroppedPaths(const QStringList&);
     void sigKeyCommand(const QString&);
 
     // —— 类别相关输出 ——
     void sigClassSelected(const QString& name);  // 选中类别时发出
+
+    // FILE：通知 service 侧刷新索引（可选但推荐）
+    void sigTreeModelReplaced(QAbstractItemModel* model);
+    void sigTreeRootChanged(const QModelIndex& root);
 
 public slots:
     // —— 外部输入（更新 UI）——
@@ -70,13 +74,9 @@ private:
     void wireButtonsToActions();
     bool textInputHasFocus() const;
 
-    // 类别视图初始化/行为
-    void setupClassListView();
-    void onClassCurrentChanged(const QModelIndex& current);
-
 private:
     std::unique_ptr<Ui::MainWindow> ui_;
-    bool logTimestamp_ = true;
+    bool logTimestamp_   = true;
     bool dragDropEnabled_ = true;
 
     // 类别

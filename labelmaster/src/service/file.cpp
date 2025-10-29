@@ -68,7 +68,7 @@ bool FileService::openDir(const QString& dir) {
     emit status(tr("打开目录：%1").arg(dir));
     LOGI(QString("打开目录：%1").arg(dir));
 
-    controller::AppSettings::instance().setLastImageDir(dir);
+    controller::AppSettings::instance().setlastImageDir(dir);
     controller::DatasetManager::instance().setImageDir(dir);
 
     // 目录小的话此时可能已经可用，尝试一次；否则等 directoryLoaded 触发再次尝试

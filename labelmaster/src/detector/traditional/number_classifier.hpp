@@ -22,7 +22,7 @@ class NumberClassifier
 public:
   NumberClassifier(
     const std::string & model_path, const std::string & label_path, const double threshold,
-    const std::vector<std::string> & ignore_classes = {});
+    const std::vector<std::string> & ignore_classes = {"negative"});
 
   void extractNumbers(const cv::Mat & src, std::vector<Armor> & armors);
 

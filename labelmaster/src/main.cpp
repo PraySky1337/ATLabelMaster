@@ -1,9 +1,13 @@
+#include "controller/settings.hpp"
+#include "detector/smart_detector.hpp"
 #include "logger/core.hpp"
 #include "service/file.hpp"
-#include "controller/settings.hpp"
+#include "ui/image_canvas.hpp"
 #include "ui/mainwindow.hpp"
 #include <QApplication>
+#include <QFile>
 #include <pthread.h>
+#include <qglobal.h>
 
 #define ASSETS_PATH "/home/developer/ws/assets"
 
@@ -14,9 +18,22 @@ int main(int argc, char* argv[]) {
     logger::Logger::installQtHandler();
     ui::MainWindow w;
     FileService files;
-    controller::AppSettings::instance().setAssetsDir(ASSETS_PATH);
+    rm_auto_aim::Detector::LightParams lp;
+    rm_auto_aim::Detector::ArmorParams ap;
+    SmartDetector detector{90, lp, ap, &w};
+    auto assets_dir = controller::AppSettings::instance().assetsDir();
+    if (QFile::exists(assets_dir)) {
+        QString model_path = assets_dir + "/models/mlp.onnx";
+        QString label_path = assets_dir + "/models/label.txt";
+        controller::AppSettings::instance();
+        detector.resetNumberClassifier(
+            model_path, label_path,
+            controller::AppSettings::instance().numberClassifierThreshold());
+    } else {
+        qWarning() << "Assets directory not found: " << assets_dir;
+    }
     
-    
+
     // MainWindow <-> FileService 其他连接保持
     QObject::connect(
         &w, &ui::MainWindow::sigOpenFolderRequested, &files, &FileService::openFolderDialog);
@@ -26,8 +43,6 @@ int main(int argc, char* argv[]) {
     QObject::connect(&w, &ui::MainWindow::sigPrevRequested, &files, &FileService::prev);
     QObject::connect(&w, &ui::MainWindow::sigDeleteRequested, &files, &FileService::deleteCurrent);
 
-    // ↓↓↓ 不再需要 files -> appendLog 的连接（交由全局 Logger 输出）
-
     QObject::connect(&files, &FileService::modelReady, &w, &ui::MainWindow::setFileModel);
     QObject::connect(&files, &FileService::rootChanged, &w, &ui::MainWindow::setRoot); // ★ 新增
     QObject::connect(
@@ -36,6 +51,9 @@ int main(int argc, char* argv[]) {
     QObject::connect(&files, &FileService::status, &w, &ui::MainWindow::setStatus);
     QObject::connect(&files, &FileService::busy, &w, &ui::MainWindow::setBusy);
 
+    // ImageCanvas <-> SmartDetector 连接 检测和检测结果
+    QObject::connect(w.ui()->label, &ImageCanvas::detectRequested, &detector, &SmartDetector::detect);
+    QObject::connect(&detector, &SmartDetector::detected, w.ui()->label, &ImageCanvas::setDetections);
     files.exposeModel();
     w.enableDragDrop(true);
     w.show();

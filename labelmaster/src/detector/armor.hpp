@@ -11,8 +11,8 @@
 #include <string>
 
 namespace rm_auto_aim {
-const int RED  = 0;
-const int BLUE = 1;
+constexpr int RED  = 0;
+constexpr int BLUE = 1;
 
 enum class ArmorType { SMALL, LARGE, INVALID };
 const std::string ARMOR_TYPE_STR[3] = {"small", "large", "invalid"};

@@ -2,7 +2,9 @@
 #include <QObject>
 #include <QImage>
 #include <memory>
-#include <vector>
+#include <QVector>
+#include "types.hpp"
+
 
 #include <opencv2/core.hpp>
 #include "traditional/detector.hpp"   // 你给的头
@@ -25,7 +27,7 @@ public:
 
 signals:
     // 主结果：一帧检测出的装甲板
-    void detected(const std::vector<rm_auto_aim::Armor>& armors);
+    void detected(const QVector<Armor>& armors);
     // 可选调试输出：二值图与标注图（若不用可删）
     void debugImages(const QImage& bin, const QImage& annotated);
     // 出错时
@@ -36,9 +38,8 @@ public slots:
     void detect(const QImage& image);
     // 传入 cv::Mat（BGR/RGB 都可，见实现）
     void detectMat(const cv::Mat& mat);
-
-private:
-
+    // 重置分类器
+    void resetNumberClassifier(const QString& model_path, const QString& label_path, float threshold);
 
 private:
     std::unique_ptr<rm_auto_aim::Detector> detector_;

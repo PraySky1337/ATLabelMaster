@@ -5,7 +5,7 @@ ENV TZ=Asia/Shanghai
 SHELL ["/bin/bash", "-c"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake git wget curl vim \
+    build-essential cmake git wget curl vim gdb \
     qt6-base-dev qt6-tools-dev qt6-tools-dev-tools \
     libqt6svg6-dev \
     libgl1-mesa-dev xcb libx11-xcb-dev \

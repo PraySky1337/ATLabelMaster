@@ -11,6 +11,8 @@
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
+#include <QSvgRenderer>
+#include <QTransform>
 #include <QWheelEvent>
 #include <QtMath>
 #include <algorithm>
@@ -21,7 +23,7 @@ static QJsonArray toJsonPt(const QPointF& p) { return QJsonArray{p.x(), p.y()}; 
 static QPointF fromJsonPt(const QJsonArray& a) {
     return (a.size() == 2) ? QPointF(a.at(0).toDouble(), a.at(1).toDouble()) : QPointF{};
 }
-static QJsonObject armorToJson(const ImageCanvas::Armor& a) {
+static QJsonObject armorToJson(const Armor& a) {
     QJsonObject o;
     o["cls"]   = a.cls;
     o["score"] = a.score;
@@ -32,7 +34,7 @@ static QJsonObject armorToJson(const ImageCanvas::Armor& a) {
     return o;
 }
 
-static bool armorFromJson(const QJsonObject& o, ImageCanvas::Armor& a) {
+static bool armorFromJson(const QJsonObject& o, Armor& a) {
     if (!o.contains("cls") || !o.contains("p0") || !o.contains("p1") || !o.contains("p2")
         || !o.contains("p3"))
         return false;
@@ -42,7 +44,6 @@ static bool armorFromJson(const QJsonObject& o, ImageCanvas::Armor& a) {
     a.p1    = fromJsonPt(o.value("p1").toArray());
     a.p2    = fromJsonPt(o.value("p2").toArray());
     a.p3    = fromJsonPt(o.value("p3").toArray());
-    ImageCanvas::normalizeArmorCCW(a);
     return true;
 }
 
@@ -53,9 +54,10 @@ ImageCanvas::ImageCanvas(QWidget* parent)
     setFocusPolicy(Qt::StrongFocus);
     setMinimumSize(100, 80);
     setContextMenuPolicy(Qt::NoContextMenu); // 防止右键被菜单吃掉
+    setupSvg();                              // 初始化SVG
 
-    qRegisterMetaType<ImageCanvas::Armor>("ImageCanvas::Armor");
-    qRegisterMetaType<QVector<ImageCanvas::Armor>>("QVector<ImageCanvas::Armor>");
+    qRegisterMetaType<Armor>("ImageCanvas::Armor");
+    qRegisterMetaType<QVector<Armor>>("QVector<ImageCanvas::Armor>");
 }
 
 /* ===== 图像 & 视图 ===== */
@@ -130,24 +132,22 @@ void ImageCanvas::resetView() {
 }
 
 /* ===== 检测请求 ===== */
-void ImageCanvas::requestDetectFull() {
-    if (!img_.isNull())
-        emit detectRequested(img_);
-}
-void ImageCanvas::requestDetectRoi() {
+void ImageCanvas::requestDetect() {
     const QImage crop = cropRoi();
     if (!crop.isNull())
         emit detectRequested(crop);
+    else
+        emit detectRequested(img_);
 }
 
 /* ===== 外部读写 ===== */
 void ImageCanvas::setDetections(const QVector<Armor>& dets) {
+    qDebug() << "setDetections: " << dets.size();
     dets_ = dets;
-    for (auto& a : dets_)
-        normalizeArmorCCW(a);
-    if (dets_.isEmpty())
+    if (dets_.isEmpty()) {
+        qDebug() << "setDetections: empty";
         selectedIndex_ = -1;
-    else if (selectedIndex_ >= dets_.size())
+    } else if (selectedIndex_ >= dets_.size())
         selectedIndex_ = dets_.size() - 1;
     if (hoverIndex_ >= dets_.size()) {
         hoverIndex_ = -1;
@@ -166,7 +166,6 @@ void ImageCanvas::clearDetections() {
 }
 void ImageCanvas::addDetection(const Armor& a0) {
     Armor a = a0;
-    normalizeArmorCCW(a);
     dets_.append(a);
     const int idx = dets_.size() - 1;
     emit detectionUpdated(idx, dets_.back());
@@ -176,7 +175,6 @@ void ImageCanvas::updateDetection(int index, const Armor& a0) {
     if (index < 0 || index >= dets_.size())
         return;
     dets_[index] = a0;
-    normalizeArmorCCW(dets_[index]);
     emit detectionUpdated(index, dets_[index]);
     update();
 }
@@ -305,6 +303,7 @@ void ImageCanvas::paintEvent(QPaintEvent*) {
 
     drawDetections(p);
     drawRoi(p);
+    drawSvg(p, dets_);
     drawDragRect(p); // <<< 新增：拖框时的虚线矩形
     drawCrosshair(p);
 }
@@ -516,7 +515,6 @@ void ImageCanvas::mouseReleaseEvent(QMouseEvent* e) {
                     a.p1 = QPointF(r.left(), r.bottom());
                     a.p2 = QPointF(r.right(), r.bottom());
                     a.p3 = QPointF(r.right(), r.top());
-                    normalizeArmorCCW(a);
 
                     dets_.append(a);
                     emit annotationCommitted(a);
@@ -533,7 +531,6 @@ void ImageCanvas::mouseReleaseEvent(QMouseEvent* e) {
         if (dragHandle_ >= 0) {
             dragHandle_ = -1;
             if (selectedIndex_ >= 0 && selectedIndex_ < dets_.size()) {
-                normalizeArmorCCW(dets_[selectedIndex_]); // <<< 保留
                 emit detectionUpdated(selectedIndex_, dets_[selectedIndex_]);
             }
             update();
@@ -763,53 +760,6 @@ void ImageCanvas::placeFixedRoiAt(const QPoint& wpos) {
     emit roiChanged(roiImg_);
 }
 
-/* ===== 工具：强制 CCW 顺序 TL,BL,BR,TR ===== */
-void ImageCanvas::normalizeArmorCCW(Armor& a) {
-    // 收集点
-    std::array<QPointF, 4> pts{a.p0, a.p1, a.p2, a.p3};
-
-    // 1) 以质心排序为 CCW
-    QPointF c(0, 0);
-    for (const auto& p : pts) {
-        c += p;
-    }
-    c /= 4.0;
-    std::sort(pts.begin(), pts.end(), [&](const QPointF& A, const QPointF& B) {
-        const double angA = std::atan2(A.y() - c.y(), A.x() - c.x());
-        const double angB = std::atan2(B.y() - c.y(), B.x() - c.x());
-        return angA < angB; // 递增即 CCW
-    });
-
-    // 2) 旋转起点为 Top-Left（y 最小，若相同取 x 最小）
-    int start = 0;
-    for (int i = 1; i < 4; ++i) {
-        if (pts[i].y() < pts[start].y()
-            || (qFuzzyCompare(pts[i].y(), pts[start].y()) && pts[i].x() < pts[start].x()))
-            start = i;
-    }
-    std::array<QPointF, 4> ccw;
-    for (int k = 0; k < 4; ++k)
-        ccw[k] = pts[(start + k) % 4];
-
-    // 3) 此时顺序是 TL, ? , ? , ? 但角度是 CCW：我们需要 TL,BL,BR,TR
-    // 判断第二个点与 TL 的相对位置，确保是 BL（y 更大且 x 近似）
-    // 若第二个点在右侧（可能是 TR），则将序列反转（仍从 TL 开始，但改为逆向）
-    auto dot    = [](const QPointF& u, const QPointF& v) { return u.x() * v.x() + u.y() * v.y(); };
-    QPointF v01 = ccw[1] - ccw[0];
-    QPointF down(0, 1);
-    bool isDown = dot(v01, down) > 0; // 1号应朝下
-    if (!isDown) {
-        // 反转为 TL, TR, BR, BL → 变成 TL, BL, BR, TR
-        std::array<QPointF, 4> rev{ccw[0], ccw[3], ccw[2], ccw[1]};
-        ccw = rev;
-    }
-
-    a.p0 = ccw[0]; // TL
-    a.p1 = ccw[1]; // BL
-    a.p2 = ccw[2]; // BR
-    a.p3 = ccw[3]; // TR
-}
-
 /* ===== UI 帮助 ===== */
 void ImageCanvas::promptEditSelectedClass() {
     if (selectedIndex_ < 0 || selectedIndex_ >= dets_.size())
@@ -820,4 +770,114 @@ void ImageCanvas::promptEditSelectedClass() {
         this, tr("Edit Class"), tr("Class label:"), QLineEdit::Normal, oldCls, &ok);
     if (ok)
         setSelectedClass(cls.trimmed());
+}
+
+void ImageCanvas::setupSvg() {
+    auto icons_dir  = controller::AppSettings::instance().assetsDir() + "/icons";
+    svgCache_["1"]  = new QSvgRenderer(icons_dir + "/1.svg", this);
+    svgCache_["2"]  = new QSvgRenderer(icons_dir + "/2.svg", this);
+    svgCache_["3"]  = new QSvgRenderer(icons_dir + "/3.svg", this);
+    svgCache_["4"]  = new QSvgRenderer(icons_dir + "/4.svg", this);
+    svgCache_["5"]  = new QSvgRenderer(icons_dir + "/5.svg", this);
+    svgCache_["Bb"] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
+    svgCache_["Bs"] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
+    svgCache_["G"]  = new QSvgRenderer(icons_dir + "/G.svg", this);
+    svgCache_["O"]  = new QSvgRenderer(icons_dir + "/O.svg", this);
+    qInfo() << "SVG loaded.";
+}
+static bool isBigType(const QString& t) {
+    // 示例规则：1 / Bb / B3 / B4 / B5 按“大装甲”；其余按“小装甲”
+    return (t == "1" || t == "Bb" || t == "B3" || t == "B4" || t == "B5");
+}
+
+// 拆分类别：首字母颜色(B/R/G/P)，后缀是图案类型（用来选 svg）
+static void splitClass(const QString& cls, QString& color, QString& type) {
+    if (!cls.isEmpty() && QStringLiteral("BRGP").contains(cls.at(0))) {
+        color = cls.left(1);
+        type  = cls.mid(1);
+    } else {
+        color.clear();
+        type = cls;
+    }
+}
+
+void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
+    if (armors.isEmpty())
+        return;
+
+    p.save();
+
+    // ---- 1) 预备：两套 SVG 外框四角（viewBox）和两套“锚点”（全是 SVG 坐标，顺序 TL, BL, BR, TR）
+    QPolygonF big_svg_quad, small_svg_quad;
+    big_svg_quad << QPointF(0., 0.) << QPointF(0., 478.) << QPointF(871., 478.)
+                 << QPointF(871., 0.);
+    small_svg_quad << QPointF(0., 0.) << QPointF(0., 516.) << QPointF(557., 516.)
+                   << QPointF(557., 0.);
+
+    QPolygonF big_anchors, small_anchors; // TL, BL, BR, TR（单位：SVG）
+    big_anchors << QPointF(0., 140.61) << QPointF(0., 347.39) << QPointF(871., 347.39)
+                << QPointF(871., 140.61);
+    small_anchors << QPointF(0., 143.26) << QPointF(0., 372.74) << QPointF(557., 372.74)
+                  << QPointF(557., 143.26);
+
+    // 画布（控件）四角（顺序也用 TL, BL, BR, TR）
+    QPolygonF painter_quad;
+    painter_quad << QPointF(0., 0.) << QPointF(0., height()) << QPointF(width(), height())
+                 << QPointF(width(), 0.);
+
+    // 先把 SVG 外框四角 -> 画布四角，得到“把 SVG 坐标投到画布坐标”的仿射/投影
+    QTransform big_svg2painter, small_svg2painter;
+    QTransform::quadToQuad(big_svg_quad, painter_quad, big_svg2painter);
+    QTransform::quadToQuad(small_svg_quad, painter_quad, small_svg2painter);
+
+    // 把“SVG 的锚点”变到画布坐标（作为 quadToQuad 的 src）
+    const QPolygonF big_src_on_painter   = big_svg2painter.map(big_anchors);
+    const QPolygonF small_src_on_painter = small_svg2painter.map(small_anchors);
+
+    for (const auto& a : armors) {
+        // —— 解析类别：取颜色 & 图案类型（用类型去找 svg）
+        QString color, type;
+        splitClass(a.cls, color, type);
+
+        // 找到对应的 QSvgRenderer（建议你的 svgCache_ 用“类型名”做 key，比如
+        // "1","2","Bb","Bs","S","O"...）
+        auto it = svgCache_.find(type);
+        if (it == svgCache_.end() || it.value() == nullptr) {
+            qWarning() << "SVG not found for type" << type;
+            continue;
+        }
+        QSvgRenderer* renderer = it.value();
+        if (!renderer->isValid())
+            continue;
+
+        // —— 目标四点（画布坐标）；注意 Armor 的顺序：p0=TL, p1=BL, p2=BR, p3=TR
+        QPolygonF dst;
+        dst << imageToWidget(a.p0)  // TL
+            << imageToWidget(a.p1)  // BL
+            << imageToWidget(a.p2)  // BR
+            << imageToWidget(a.p3); // TR
+
+        // 选择 big/small 的“源四点”（同样是 TL, BL, BR, TR；已在画布坐标）
+        const QPolygonF& src = isBigType(type) ? big_src_on_painter : small_src_on_painter;
+
+        // —— 求单应 & 渲染
+        QTransform H;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        if (!QTransform::quadToQuad(src, dst, H))
+            continue;
+#else
+        if (!QTransform::quadToQuad(src, dst, H))
+            continue;
+#endif
+        p.save();
+        p.setRenderHint(QPainter::Antialiasing, true);
+        p.setTransform(H, true);
+        renderer->render(&p); // SVG 将按“锚点→目标四点”透视过去
+        p.restore();
+
+        // （可选）根据 color 设置边框主色等，你可以在别处画：B/R/G/P → 蓝/红/灰/紫
+        // 例如：if (color=="B") pen = blue; ...
+    }
+
+    p.restore();
 }
