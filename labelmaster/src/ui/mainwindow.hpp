@@ -36,6 +36,7 @@ signals:
     void sigDeleteRequested();
     void sigSmartAnnotateRequested();
     void sigSettingsRequested();
+    void sigAnnotateRequested();
     void sigFileActivated(const QModelIndex&);
     void sigDroppedPaths(const QStringList&);
     void sigKeyCommand(const QString&);

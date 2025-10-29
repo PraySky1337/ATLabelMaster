@@ -1,8 +1,11 @@
 #include "logger/core.hpp"
 #include "service/file.hpp"
+#include "controller/settings.hpp"
 #include "ui/mainwindow.hpp"
 #include <QApplication>
 #include <pthread.h>
+
+#define ASSETS_PATH "/home/developer/ws/assets"
 
 int main(int argc, char* argv[]) {
     // 1) 先安装 Qt 的全局消息处理器，尽早捕获日志
@@ -11,6 +14,9 @@ int main(int argc, char* argv[]) {
     logger::Logger::installQtHandler();
     ui::MainWindow w;
     FileService files;
+    controller::AppSettings::instance().setAssetsDir(ASSETS_PATH);
+    
+    
     // MainWindow <-> FileService 其他连接保持
     QObject::connect(
         &w, &ui::MainWindow::sigOpenFolderRequested, &files, &FileService::openFolderDialog);

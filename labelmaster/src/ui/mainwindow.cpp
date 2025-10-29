@@ -41,6 +41,12 @@ MainWindow::MainWindow(QWidget* parent)
         connect(tv, &QTreeView::doubleClicked, this, &MainWindow::sigFileActivated);
     }
 
+    // 进入 Class Selection 状态
+    connect(this, &MainWindow::sigClassSelected, this, [this](const QString& name) {
+        if (ui_->label)
+            ui_->label->setCurrentClass(name);
+    });
+
     // 左侧类别列表
     setupClassListView();
 
@@ -237,6 +243,25 @@ void MainWindow::keyPressEvent(QKeyEvent* e) {
         emit sigSmartAnnotateRequested();
         e->accept();
         return;
+    case Qt::Key_F1:
+        emit sigSettingsRequested();
+        e->accept();
+        return;
+    case Qt::Key_A: {
+        // A 键：开始标注（拖矩形 -> 四点精调）
+        QString cls = currentClass_;
+        // 若当前还没选类别，尝试默认第 1 项；否则用 "unknown"
+        if (cls.isEmpty() && clsModel_ && clsModel_->rowCount() > 0)
+            cls = clsModel_->data(clsModel_->index(0), Qt::DisplayRole).toString();
+        if (cls.isEmpty())
+            cls = QStringLiteral("unknown");
+
+        setStatus(
+            tr("开始标注：%1（拖一个矩形，然后拖拽角点精调，回车提交，右键/ESC取消）").arg(cls),
+            2000);
+        e->accept();
+        return;
+    }
     default: emit sigKeyCommand(QKeySequence(e->key()).toString()); break;
     }
     QMainWindow::keyPressEvent(e);

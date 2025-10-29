@@ -20,25 +20,28 @@ public:
     static void useIniFile(const QString& iniFilePath);
 
     // ---- dataset paths ----
-    [[nodiscard]] QString saveDir()      const noexcept;
-    AppSettings&          setSaveDir(const QString& d);
+    [[nodiscard]] QString saveDir() const noexcept;
+    AppSettings& setSaveDir(const QString& d);
 
     [[nodiscard]] QString lastImageDir() const noexcept;
-    AppSettings&          setLastImageDir(const QString& d);
+    AppSettings& setLastImageDir(const QString& d);
 
     // ---- behavior ----
-    [[nodiscard]] bool autoSave()  const noexcept;
-    AppSettings&        setAutoSave(bool v);
+    [[nodiscard]] bool autoSave() const noexcept;
+    AppSettings& setAutoSave(bool v);
 
     // ---- ROI ----
-    [[nodiscard]] bool fixedRoi()  const noexcept;
-    AppSettings&        setFixedRoi(bool v);
+    [[nodiscard]] bool fixedRoi() const noexcept;
+    AppSettings& setFixedRoi(bool v);
 
-    [[nodiscard]] int  roiW()      const noexcept;
-    AppSettings&        setRoiW(int w);
+    [[nodiscard]] int roiW() const noexcept;
+    AppSettings& setRoiW(int w);
 
-    [[nodiscard]] int  roiH()      const noexcept;
-    AppSettings&        setRoiH(int h);
+    [[nodiscard]] int roiH() const noexcept;
+    AppSettings& setRoiH(int h);
+
+    [[nodiscard]] QString assetsDir() const noexcept;
+    AppSettings& setAssetsDir(const QString& path);
 
     // ---- misc ----
     // Force flush to storage immediately. Usually QSettings auto-syncs, but
@@ -57,18 +60,19 @@ private:
     // Centralized keys & defaults
     struct Keys {
         // groups/keys (flat keys for simplicity)
-        static constexpr const char* kSaveDir       = "dataset/saveDir";
-        static constexpr const char* kLastImageDir  = "dataset/lastImageDir";
-        static constexpr const char* kAutoSave      = "behavior/autoSave";
-        static constexpr const char* kFixedRoi      = "roi/fixed";
-        static constexpr const char* kRoiW          = "roi/w";
-        static constexpr const char* kRoiH          = "roi/h";
+        static constexpr const char* kSaveDir      = "dataset/saveDir";
+        static constexpr const char* kLastImageDir = "dataset/lastImageDir";
+        static constexpr const char* kAutoSave     = "behavior/autoSave";
+        static constexpr const char* kFixedRoi     = "roi/fixed";
+        static constexpr const char* kRoiW         = "roi/w";
+        static constexpr const char* kRoiH         = "roi/h";
+        static constexpr const char* kAssetsDir    = "assets/dir";
     };
     struct Def {
-        static constexpr bool kAutoSave   = false;
-        static constexpr bool kFixedRoi   = false;
-        static constexpr int  kRoiW       = 640;
-        static constexpr int  kRoiH       = 640;
+        static constexpr bool kAutoSave = false;
+        static constexpr bool kFixedRoi = false;
+        static constexpr int kRoiW      = 640;
+        static constexpr int kRoiH      = 480;
     };
 
     // Underlying storage
@@ -77,4 +81,4 @@ private:
     // Otherwise, we use the org/app ctor.
     static QScopedPointer<QSettings> s_iniOverride_;
 };
-}
+} // namespace controller

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1840</width>
-    <height>1101</height>
+    <height>1052</height>
    </rect>
   </property>
   <property name="acceptDrops">
@@ -51,7 +51,7 @@
        <item>
         <widget class="QListView" name="list_view">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -72,6 +72,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="open_folder_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>打开文件夹</string>
          </property>
@@ -79,6 +85,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="smart_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>智能标注</string>
          </property>
@@ -86,6 +98,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="previous_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>上一张(Q)</string>
          </property>
@@ -93,6 +111,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="next_pic">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>下一张(E)</string>
          </property>
@@ -100,6 +124,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="histogram_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>直方图均衡化</string>
          </property>
@@ -108,7 +138,7 @@
        <item>
         <widget class="QPushButton" name="delete_button">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -126,6 +156,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="save_button">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>保存标注</string>
          </property>
@@ -133,6 +169,12 @@
        </item>
        <item>
         <widget class="QPushButton" name="pushButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
          <property name="text">
           <string>设置</string>
          </property>

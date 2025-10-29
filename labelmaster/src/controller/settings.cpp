@@ -82,4 +82,14 @@ AppSettings& AppSettings::setRoiH(int h) {
 
 /* ---------- sync ---------- */
 void AppSettings::sync() noexcept { settings_.sync(); }
+
+QString AppSettings::assetsDir() const noexcept {
+    return settings_.value(Keys::kAssetsDir).toString();
+}
+
+AppSettings& AppSettings::setAssetsDir(const QString& path) {
+    settings_.setValue(Keys::kAssetsDir, path);
+    return *this;
+}
+
 } // namespace controller
