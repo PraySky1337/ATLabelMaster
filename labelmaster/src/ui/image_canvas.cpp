@@ -25,12 +25,11 @@ static QPointF fromJsonPt(const QJsonArray& a) {
 }
 static QJsonObject armorToJson(const Armor& a) {
     QJsonObject o;
-    o["cls"]   = a.cls;
-    o["score"] = a.score;
-    o["p0"]    = toJsonPt(a.p0);
-    o["p1"]    = toJsonPt(a.p1);
-    o["p2"]    = toJsonPt(a.p2);
-    o["p3"]    = toJsonPt(a.p3);
+    o["cls"] = a.cls;
+    o["p0"]  = toJsonPt(a.p0);
+    o["p1"]  = toJsonPt(a.p1);
+    o["p2"]  = toJsonPt(a.p2);
+    o["p3"]  = toJsonPt(a.p3);
     return o;
 }
 
@@ -38,12 +37,11 @@ static bool armorFromJson(const QJsonObject& o, Armor& a) {
     if (!o.contains("cls") || !o.contains("p0") || !o.contains("p1") || !o.contains("p2")
         || !o.contains("p3"))
         return false;
-    a.cls   = o.value("cls").toString();
-    a.score = float(o.value("score").toDouble(0.0));
-    a.p0    = fromJsonPt(o.value("p0").toArray());
-    a.p1    = fromJsonPt(o.value("p1").toArray());
-    a.p2    = fromJsonPt(o.value("p2").toArray());
-    a.p3    = fromJsonPt(o.value("p3").toArray());
+    a.cls = o.value("cls").toString();
+    a.p0  = fromJsonPt(o.value("p0").toArray());
+    a.p1  = fromJsonPt(o.value("p1").toArray());
+    a.p2  = fromJsonPt(o.value("p2").toArray());
+    a.p3  = fromJsonPt(o.value("p3").toArray());
     return true;
 }
 
@@ -327,57 +325,67 @@ void ImageCanvas::drawDragRect(QPainter& p) const {
 }
 
 void ImageCanvas::drawDetections(QPainter& p) const {
-    if (dets_.isEmpty())
-        return;
+    if (dets_.isEmpty()) return;
     p.save();
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setClipRect(imageRectOnWidget());
 
+    auto colorOf = [](const QString& c)->QColor {
+        if (c.isEmpty()) return QColor(0,200,255);
+        const QChar C = c.at(0).toUpper();
+        if (C=='R') return QColor(255, 70,  70);   // 红
+        if (C=='B') return QColor( 61,165,255);   // 蓝
+        if (C=='G') return QColor(170,170,180);   // 灰
+        if (C=='P') return QColor (255,192,203);   //紫
+        return QColor(0,200,255);
+    };
+
     for (int i = 0; i < dets_.size(); ++i) {
         const auto& d = dets_[i];
         QPolygonF poly;
-        poly << imageToWidget(d.p0) << imageToWidget(d.p1) << imageToWidget(d.p2)
-             << imageToWidget(d.p3);
+        poly << imageToWidget(d.p0) << imageToWidget(d.p1)
+             << imageToWidget(d.p2) << imageToWidget(d.p3);
 
         const bool isSel   = (i == selectedIndex_);
         const bool isHover = (i == hoverIndex_);
+        const QColor base  = colorOf(d.color);
 
+        // 叠加填充（选中/悬停）
         if (isSel || isHover) {
             p.setPen(Qt::NoPen);
-            p.setBrush(isSel ? QColor(255, 160, 0, 60) : QColor(0, 220, 255, 60));
+            QColor fill = base; fill.setAlpha(isSel ? 60 : 45);
+            p.setBrush(fill);
             p.drawPolygon(poly);
         }
 
-        QPen pen;
-        if (isSel)
-            pen = QPen(QColor(255, 120, 0), 3);
-        else if (isHover)
-            pen = QPen(QColor(0, 220, 255), 3);
-        else
-            pen = QPen(QColor(0, 200, 255), 2);
+        // 轮廓
+        QPen pen = isSel ? QPen(base, 3)
+                         : isHover ? QPen(base.lighter(125), 3)
+                                   : QPen(base, 2);
+        pen.setJoinStyle(Qt::MiterJoin);
+        pen.setCapStyle(Qt::SquareCap);
         p.setPen(pen);
         p.setBrush(Qt::NoBrush);
         p.drawPolygon(poly);
 
-        const QPointF tl   = poly.boundingRect().topLeft();
-        const QString text = d.score > 0.f ? QString("%1 (%.2f)").arg(d.cls).arg(d.score) : d.cls;
-        QFont f            = p.font();
-        f.setPointSizeF(f.pointSizeF() + 1);
+        // 文本（描边 + 主色）
+        const QPointF tl = poly.boundingRect().topLeft();
+        const QString text = QString("%1%2").arg(d.color).arg(d.cls);
+        QFont f = p.font(); f.setPointSizeF(f.pointSizeF() + 1);
         p.setFont(f);
-        p.setPen(Qt::yellow);
+        p.setPen(QPen(Qt::black, 4));                  // 外描边
+        p.drawText(tl + QPointF(2, -2), text);
+        p.setPen(QPen(base.lighter(120), 1));          // 主色文字
         p.drawText(tl + QPointF(2, -2), text);
 
-        // 选中时绘制角点
+        // 选中时角点
         if (isSel) {
             p.setPen(Qt::NoPen);
             for (int k = 0; k < 4; ++k) {
-                const QPointF w = imageToWidget(
-                    (k == 0)   ? d.p0
-                    : (k == 1) ? d.p1
-                    : (k == 2) ? d.p2
-                               : d.p3);
+                const QPointF w = imageToWidget(k==0?d.p0 : k==1?d.p1 : k==2?d.p2 : d.p3);
                 const bool hot = (k == hoverHandle_ || k == dragHandle_);
-                p.setBrush(hot ? QColor(255, 200, 0) : QColor(0, 180, 255));
+                QColor c = hot ? base.lighter(120) : base;
+                p.setBrush(c);
                 p.drawEllipse(w, kHandleRadius_, kHandleRadius_);
             }
         }
@@ -791,14 +799,15 @@ static bool isBigType(const QString& t) {
 }
 
 // 拆分类别：首字母颜色(B/R/G/P)，后缀是图案类型（用来选 svg）
-static void splitClass(const QString& cls, QString& color, QString& type) {
-    if (!cls.isEmpty() && QStringLiteral("BRGP").contains(cls.at(0))) {
-        color = cls.left(1);
-        type  = cls.mid(1);
-    } else {
+static inline void splitClass(const QString& cls, QString& color, QString& type) {
+    const QString s = cls.trimmed();
+    if (s.isEmpty()) {
         color.clear();
-        type = cls;
+        type.clear();
+        return;
     }
+    color = s.left(1).toUpper(); // B / R / G / 
+    type  = s.mid(1);            // "1","2","Bs","Bb",...
 }
 
 void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
@@ -837,7 +846,10 @@ void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
     for (const auto& a : armors) {
         // —— 解析类别：取颜色 & 图案类型（用类型去找 svg）
         QString color, type;
-        splitClass(a.cls, color, type);
+        color = a.color;
+        type  = a.cls;
+        // splitClass(a.cls, color, type);
+        // qDebug() << "color=" << color << "type=" << type;
 
         // 找到对应的 QSvgRenderer（建议你的 svgCache_ 用“类型名”做 key，比如
         // "1","2","Bb","Bs","S","O"...）

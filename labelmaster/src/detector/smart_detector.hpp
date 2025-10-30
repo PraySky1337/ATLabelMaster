@@ -1,14 +1,14 @@
 #pragma once
-#include <QObject>
+#include "ai/detector.hpp"
 #include <QImage>
-#include <memory>
+#include <QObject>
 #include <QVector>
+#include <memory>
+
+#include "armor.hpp"                // rm_auto_aim::Armor
+#include "traditional/detector.hpp" // 你给的头
 #include "types.hpp"
-
-
 #include <opencv2/core.hpp>
-#include "traditional/detector.hpp"   // 你给的头
-#include "armor.hpp"      // rm_auto_aim::Armor
 
 // 声明给 Qt 的元类型（用于跨线程信号）
 Q_DECLARE_METATYPE(std::vector<rm_auto_aim::Armor>)
@@ -16,13 +16,12 @@ Q_DECLARE_METATYPE(std::vector<rm_auto_aim::Armor>)
 class SmartDetector : public QObject {
     Q_OBJECT
 public:
+    enum Mode { Traditional, AI };
     explicit SmartDetector(
-        int bin_thres,
-        const rm_auto_aim::Detector::LightParams& lp,
-        const rm_auto_aim::Detector::ArmorParams& ap,
-        QObject* parent = nullptr);
+        int bin_thres, const rm_auto_aim::Detector::LightParams& lp,
+        const rm_auto_aim::Detector::ArmorParams& ap, QObject* parent = nullptr);
+    explicit SmartDetector(QObject* parent = nullptr);
 
-    // 若需动态改参数，可暴露这两个接口（可选）
     void setBinaryThreshold(int thres);
 
 signals:
@@ -39,8 +38,11 @@ public slots:
     // 传入 cv::Mat（BGR/RGB 都可，见实现）
     void detectMat(const cv::Mat& mat);
     // 重置分类器
-    void resetNumberClassifier(const QString& model_path, const QString& label_path, float threshold);
+    void resetNumberClassifier(
+        const QString& model_path, const QString& label_path, float threshold);
 
 private:
-    std::unique_ptr<rm_auto_aim::Detector> detector_;
+    Mode mode = Mode::AI;
+    std::unique_ptr<rm_auto_aim::Detector> traditional_detector_;
+    std::unique_ptr<ai::Detector> ai_detector_;
 };

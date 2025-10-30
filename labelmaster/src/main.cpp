@@ -20,19 +20,17 @@ int main(int argc, char* argv[]) {
     FileService files;
     rm_auto_aim::Detector::LightParams lp;
     rm_auto_aim::Detector::ArmorParams ap;
-    SmartDetector detector{90, lp, ap, &w};
-    auto assets_dir = controller::AppSettings::instance().assetsDir();
-    if (QFile::exists(assets_dir)) {
-        QString model_path = assets_dir + "/models/mlp.onnx";
-        QString label_path = assets_dir + "/models/label.txt";
-        controller::AppSettings::instance();
-        detector.resetNumberClassifier(
-            model_path, label_path,
-            controller::AppSettings::instance().numberClassifierThreshold());
-    } else {
-        qWarning() << "Assets directory not found: " << assets_dir;
-    }
-    
+    SmartDetector detector{&w};
+    // if (QFile::exists(assets_dir)) {
+    //     QString model_path = assets_dir + "/models/mlp.onnx";
+    //     QString label_path = assets_dir + "/models/label.txt";
+    //     controller::AppSettings::instance();
+    //     detector.resetNumberClassifier(
+    //         model_path, label_path,
+    //         controller::AppSettings::instance().numberClassifierThreshold());
+    // } else {
+    //     qWarning() << "Assets directory not found: " << assets_dir;
+    // }
 
     // MainWindow <-> FileService 其他连接保持
     QObject::connect(

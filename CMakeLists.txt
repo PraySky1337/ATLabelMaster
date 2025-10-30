@@ -22,6 +22,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 )
 
 find_package(OpenCV REQUIRED)
+find_package(OpenVINO REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui Svg)
 
@@ -38,6 +39,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Gui
     Qt6::Svg
     ${OpenCV_LIBS}
+    openvino::runtime
 )
 
 install(TARGETS ${PROJECT_NAME}
