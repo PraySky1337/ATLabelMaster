@@ -72,8 +72,8 @@ void SmartDetector::detectMat(const cv::Mat& mat) {
         }
 
         // 调试图像（可选）
-        cv::Mat draw = input.clone();
-        QImage anno  = matToQImage(draw);
+        // cv::Mat draw = input.clone();
+        // QImage anno  = matToQImage(draw);
 
         qDebug() << "emit detected";
         emit detected(sigArmors);

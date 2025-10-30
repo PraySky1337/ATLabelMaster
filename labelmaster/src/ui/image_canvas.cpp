@@ -218,75 +218,8 @@ bool ImageCanvas::setSelectedClass(const QString& cls) {
     update();
     return true;
 }
-void ImageCanvas::publishAnnotations() { emit annotationsPublished(imgPath_, roiImg_, dets_); }
 
 /* ===== 导入/导出 ===== */
-bool ImageCanvas::saveLabelsToJsonFile(const QString& path) const {
-    QJsonObject root;
-    if (!imgPath_.isEmpty())
-        root["image_path"] = imgPath_;
-    if (!roiImg_.isNull())
-        root["roi"] = QJsonArray{roiImg_.x(), roiImg_.y(), roiImg_.width(), roiImg_.height()};
-    QJsonArray arr;
-    for (const auto& d : dets_)
-        arr.push_back(armorToJson(d));
-    root["objects"] = arr;
-    QFile f(path);
-    if (!f.open(QIODevice::WriteOnly)) {
-        qWarning("saveLabelsToJsonFile: open('%s') failed", qPrintable(path));
-        return false;
-    }
-    f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
-    return true;
-}
-bool ImageCanvas::loadLabelsFromJsonFile(const QString& path) {
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly)) {
-        qWarning("loadLabelsFromJsonFile: open('%s') failed", qPrintable(path));
-        return false;
-    }
-    const auto doc = QJsonDocument::fromJson(f.readAll());
-    if (!doc.isObject()) {
-        qWarning("loadLabelsFromJsonFile: json root is not object");
-        return false;
-    }
-    const auto root = doc.object();
-
-    clearDetections();
-    selectedIndex_ = -1;
-    hoverIndex_    = -1;
-
-    if (root.contains("image_path"))
-        imgPath_ = root.value("image_path").toString();
-
-    if (root.contains("roi")) {
-        const auto a = root.value("roi").toArray();
-        if (a.size() == 4) {
-            roiImg_ = QRect(a.at(0).toInt(), a.at(1).toInt(), a.at(2).toInt(), a.at(3).toInt());
-            emit roiChanged(roiImg_);
-            emit roiCommitted(roiImg_);
-        }
-    } else
-        clearRoi();
-
-    QVector<Armor> tmp;
-    if (root.contains("objects")) {
-        const auto arr = root.value("objects").toArray();
-        tmp.reserve(arr.size());
-        for (const auto& v : arr) {
-            if (!v.isObject())
-                continue;
-            Armor a;
-            if (armorFromJson(v.toObject(), a))
-                tmp.push_back(a);
-        }
-    }
-    setDetections(tmp);
-    emit detectionSelected(-1);
-    emit detectionHovered(-1);
-    update();
-    return true;
-}
 
 /* ===== 绘制 ===== */
 void ImageCanvas::paintEvent(QPaintEvent*) {
@@ -892,4 +825,9 @@ void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
     }
 
     p.restore();
+}
+
+void ImageCanvas::requestSave() {
+    qDebug() << "requestSave called";
+    emit annotationsPublished(dets_);
 }

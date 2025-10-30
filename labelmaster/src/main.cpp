@@ -50,8 +50,15 @@ int main(int argc, char* argv[]) {
     QObject::connect(&files, &FileService::busy, &w, &ui::MainWindow::setBusy);
 
     // ImageCanvas <-> SmartDetector 连接 检测和检测结果
-    QObject::connect(w.ui()->label, &ImageCanvas::detectRequested, &detector, &SmartDetector::detect);
-    QObject::connect(&detector, &SmartDetector::detected, w.ui()->label, &ImageCanvas::setDetections);
+    QObject::connect(
+        w.ui()->label, &ImageCanvas::detectRequested, &detector, &SmartDetector::detect);
+    QObject::connect(
+        &detector, &SmartDetector::detected, w.ui()->label, &ImageCanvas::setDetections);
+    //
+    QObject::connect(
+        &files, &FileService::labelsLoaded, w.ui()->label, &ImageCanvas::setDetections);
+    QObject::connect(
+        w.ui()->label, &ImageCanvas::annotationsPublished, &files, &FileService::saveLabels);
     files.exposeModel();
     w.enableDragDrop(true);
     w.show();

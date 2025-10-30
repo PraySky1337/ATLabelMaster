@@ -40,6 +40,7 @@ public:
 public slots:
     // 检测请求
     void requestDetect();
+    void requestSave();
 
     // 检测结果显示/外部读写
     void setDetections(const QVector<Armor>& dets);  // 覆盖全部
@@ -54,14 +55,6 @@ public slots:
     bool setSelectedClass(const QString& cls);                        // 改“选中框”的 cls
     bool setSelectedIndex(int idx);                                   // -1 取消选中
     int selectedIndex() const { return selectedIndex_; }
-
-    // 批量发布（图像路径、ROI、全部框）
-    void publishAnnotations();
-
-    // 导出/导入 label（JSON）
-    bool saveLabelsToJsonFile(const QString& path) const;
-    bool loadLabelsFromJsonFile(const QString& path);
-
 signals:
     // ROI
     void roiChanged(const QRect& roiImg);
@@ -79,9 +72,8 @@ signals:
     void detectionUpdated(int index, const Armor&); // 类别或点被改
     void detectionRemoved(int index);               // 删除哪个
 
-    // 批量发布（供外部保存/网络发送）
-    void annotationsPublished(
-        const QString& imagePath, const QRect& roiImg, const QVector<Armor>& dets);
+    // 批量发布（供外部保存）
+    void annotationsPublished(const QVector<Armor>& armors);
 
 protected:
     // 绘制与交互
