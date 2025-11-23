@@ -15,8 +15,6 @@
 #include <QQueue>
 #include <QSettings>
 #include <QSortFilterProxyModel>
-#include <chrono>
-#include <cstddef>
 #include <cstdio>
 #include <qabstractitemmodel.h>
 #include <qbuffer.h>
@@ -31,8 +29,10 @@
 #include <qlist.h>
 #include <qmath.h>
 #include <qnamespace.h>
+#include <qobject.h>
 #include <qpointer.h>
 #include <qsettings.h>
+#include <qsharedpointer.h>
 #include <qsortfilterproxymodel.h>
 #include <qstringalgorithms.h>
 #include <qtmetamacros.h>
@@ -48,7 +48,6 @@
 
 #include "../ui/stas_dialog.h"
 #include "../util/string.hpp"
-#include "controller/dataset.hpp"
 #include "controller/settings.hpp"
 #include "logger/core.hpp"
 
@@ -158,6 +157,18 @@ int FileService::classToken2Id(const QString& NormalizedToken) {
         return 6;
     if (NormalizedToken == "Bb")
         return 7;
+    if (NormalizedToken == "5") {
+        return 8;
+    }
+    if (NormalizedToken == "B3") {
+        return 9;
+    }
+    if (NormalizedToken == "B4") {
+        return 10;
+    }
+    if (NormalizedToken == "B5") {
+        return 11;
+    }
     return 0;                                                   // 默认哨兵
 }
 QString FileService::classId2Token(const int& Id) {
@@ -166,6 +177,10 @@ QString FileService::classId2Token(const int& Id) {
     case 5: return "O";
     case 6: return "Bs";
     case 7: return "Bb";
+    case 8: return "5";
+    case 9:
+    case 10:
+    case 11: return "B" + QString(QChar(Id - 6 + '0'));
     default: return QString(QChar(Id + '0'));
     }
 }
@@ -179,8 +194,17 @@ QString FileService::normalizeClasslToken(const QString& cls) { // 归一化cls
         return "Bs";
     if (u == "BB")
         return "Bb";
-    if (u == "1" || u == "2" || u == "3" || u == "4") {
+    if (u == "1" || u == "2" || u == "3" || u == "4" || u == "5") {
         return u;
+    }
+    if (u.at(0) == 'B') {
+        bool ok = true;
+        switch (u.at(1).toLatin1() - 48) {
+        case 3: return "B3"; break;
+        case 4: return "B4"; break;
+        case 5: return "B5"; break;
+        default: break;
+        }
     }
     // if (s == "Bs" || s == "Bb")
     //     return s;
@@ -239,7 +263,7 @@ void FileService::openFolderDialog(const DataSet& type) {
     currentDataSet = type; // 设置DataSet用于判断是否导入
     openDir(dir);
 }
-// 目录加载完成后如果需要导入，则进行导入，如果不需要再尝试选第一张
+// 目录加载完成后如果需要导入，则进行导入，如果不需要导入再尝试选第一张
 void FileService::selectFirst(const QString& path) {
     if (pendingDir_.isEmpty()) {
         emit busy(false);
@@ -515,11 +539,14 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             // Red	1
                             // N（熄灭) 2
                             // Purple	3
-                            if (0 <= clsId && clsId < 5) {
+                            if ((0 <= clsId && clsId < 5) || (clsId > 8 && clsId < 12)) {
                                 convertStream << t.join(" ") << "\n";
                             } else if (clsId > 5 && clsId < 9) {
                                 clsId--;
-                                t[0] = QString(QChar('0' + clsId));
+                                t[1] = QString(QChar('0' + clsId));
+                                convertStream << t.join(" ") << "\n";
+                            } else if (clsId == 5) {
+                                t[1] = QString(QChar('5'));
                                 convertStream << t.join(" ") << "\n";
                             } else {
                                 continue;
@@ -529,9 +556,10 @@ bool FileService::tryImportDataSetAfterLoaded() {
                         QString Text = convertStream.readAll();
                         buffer.close();
                         labelFile.close();
-                        labelFile.open(QIODevice::WriteOnly);
-                        ts << Text;
-                        labelFile.close();
+                        if (labelFile.open(QIODevice::WriteOnly)) {
+                            ts << Text;
+                            labelFile.close();
+                        }
                         break;
                     }
                     default: break;
@@ -863,7 +891,7 @@ void FileService::getStas(int colorId, int classId) {
         const QString labelPath = labelFileForImage(imgPath);
         if (QFile::exists(labelPath)) {
             QFile file(labelPath);
-            if(file.open(QIODevice::ReadOnly | QIODevice::Text)){
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
                 QTextStream ts(&file);
                 while (!ts.atEnd()) {
                     QStringList t;
@@ -891,9 +919,7 @@ void FileService::getStas(int colorId, int classId) {
                         }
                     }
                 }
-
             }
-
         }
     }
     emit StasGetted(sum);
