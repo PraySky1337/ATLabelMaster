@@ -22,6 +22,7 @@
 #include <qbuffer.h>
 #include <qdebug.h>
 #include <qdir.h>
+#include <qfiledialog.h>
 #include <qfileinfo.h>
 #include <qglobal.h>
 #include <qhashfunctions.h>
@@ -230,7 +231,9 @@ void FileService::importFrom(const QAction* action) {
 // ---------- 打开入口 ----------
 
 void FileService::openFolderDialog(const DataSet& type) {
-    const QString dir = QFileDialog::getExistingDirectory(nullptr, tr("选择图片文件夹"));
+    const QString dir = QFileDialog::getExistingDirectory(
+        nullptr, tr("选择图片文件夹"), QString(),
+        QFileDialog::Options(QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly));
     if (dir.isEmpty())
         return;
     currentDataSet = type; // 设置DataSet用于判断是否导入

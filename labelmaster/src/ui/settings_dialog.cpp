@@ -46,16 +46,20 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     connect(this->ui_->roi_w_spin, &QSpinBox::editingFinished, this, &SettingsDialog::setRoiW);
 }
 void SettingsDialog::SaveDirEditUpdate() {
-    const QString str = QFileDialog::getExistingDirectory();
-    if (!str.isEmpty()) {
-        this->ui_->dataset_dir_edit->setText(str);
+    const QString dir = QFileDialog::getExistingDirectory(
+        nullptr, tr("选择图片文件夹"), QString(),
+        QFileDialog::Options(QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly));
+    if (!dir.isEmpty()) {
+        this->ui_->dataset_dir_edit->setText(dir);
         setSaveDir();
     }
 }
 void SettingsDialog::LastImageDirEditUpdate() {
-    const QString str = QFileDialog::getExistingDirectory();
-    if (!str.isEmpty()) {
-        this->ui_->last_img_dir_edit->setText(str);
+    const QString dir = QFileDialog::getExistingDirectory(
+        nullptr, tr("选择图片文件夹"), QString(),
+        QFileDialog::Options(QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly));
+    if (!dir.isEmpty()) {
+        this->ui_->last_img_dir_edit->setText(dir);
         setLastImageDir();
     }
 }
