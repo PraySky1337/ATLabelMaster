@@ -863,34 +863,37 @@ void FileService::getStas(int colorId, int classId) {
         const QString labelPath = labelFileForImage(imgPath);
         if (QFile::exists(labelPath)) {
             QFile file(labelPath);
-            file.open(QIODevice::ReadOnly | QIODevice::Text);
-            QTextStream ts(&file);
-            while (!ts.atEnd()) {
-                QStringList t;
-                if (!StringProcess::processLabelString(ts.readLine(), t)) {
-                    continue;
-                }
-                bool ok      = false;
-                int colId    = t.at(0).toInt(&ok);
-                colId        = ok ? colId : colorToken2Id(t.at(0));
-                int clsId    = t.at(1).toInt(&ok);
-                clsId        = ok ? clsId : classToken2Id(normalizeClasslToken(t.at(1)));
-                auto checkId = [&](const int& value, const int& target) {
-                    if (target == -1) {
-                        return true;
-                    } else {
-                        if (value == target) {
+            if(file.open(QIODevice::ReadOnly | QIODevice::Text)){
+                QTextStream ts(&file);
+                while (!ts.atEnd()) {
+                    QStringList t;
+                    if (!StringProcess::processLabelString(ts.readLine(), t)) {
+                        continue;
+                    }
+                    bool ok      = false;
+                    int colId    = t.at(0).toInt(&ok);
+                    colId        = ok ? colId : colorToken2Id(t.at(0));
+                    int clsId    = t.at(1).toInt(&ok);
+                    clsId        = ok ? clsId : classToken2Id(normalizeClasslToken(t.at(1)));
+                    auto checkId = [&](const int& value, const int& target) {
+                        if (target == -1) {
                             return true;
+                        } else {
+                            if (value == target) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+                    if (checkId(colId, colorId)) {
+                        if (checkId(clsId, classId)) {
+                            sum++;
                         }
                     }
-                    return false;
-                };
-                if (checkId(colId, colorId)) {
-                    if (checkId(clsId, classId)) {
-                        sum++;
-                    }
                 }
+
             }
+
         }
     }
     emit StasGetted(sum);
