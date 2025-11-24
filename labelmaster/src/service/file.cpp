@@ -35,6 +35,7 @@
 #include <qsharedpointer.h>
 #include <qsortfilterproxymodel.h>
 #include <qstringalgorithms.h>
+#include <qtimer.h>
 #include <qtmetamacros.h>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 # include <QStringConverter> // Qt6: QTextStream::setEncoding
@@ -224,7 +225,7 @@ FileService::FileService(QObject* parent)
     proxy_->setSourceModel(fsModel_);
     proxy_->setRecursiveFilteringEnabled(true);
     proxy_->setDynamicSortFilter(true);
-
+    // Don't use DirectoryLoaded , need sort
     connect(
         fsModel_, &QFileSystemModel::directoryLoaded, this, &FileService::selectFirst,
         Qt::UniqueConnection);
@@ -247,8 +248,10 @@ void FileService::exposeModel() { emit modelReady(proxy_); }
 
 void FileService::importFrom(const QAction* action) {
     DataSet dataset;
-    if (action->objectName() == "actionImport1") {
-        dataset = DataSet::SJTU;
+    if (action->objectName() == "actionImport1") { // 南工骁鹰
+        dataset = DataSet::HITSZ;
+    } else {                                       // RCS
+        dataset = DataSet::UPC;
     }
     openFolderDialog(dataset);
 }
@@ -271,9 +274,9 @@ void FileService::selectFirst(const QString& path) {
     }
     if (!(path == pendingDir_ || path.startsWith(pendingDir_ + '/'))) {
         return;
-    }
+    };
     if (tryImportDataSetAfterLoaded()) {
-        QTimer::singleShot(0, this, [this]() { tryOpenFirstAfterLoaded(pendingDir_); });
+        tryOpenFirstAfterLoaded(pendingDir_);
     }
 }
 // BFS 找第一张图片（跨多层）
@@ -423,7 +426,13 @@ void FileService::deleteCurrent() {
 bool FileService::openDir(const QString& dir) {
     emit busy(true);
 
-    pendingDir_               = dir; // 不清空 pendingTargetPath_，以便恢复时指定目标文件
+    QString lastDir = fsModel_->rootPath();
+    pendingDir_     = dir; // 不清空 pendingTargetPath_，以便恢复时指定目标文件
+    if (lastDir == dir) {
+        LOGW(QString("目录已经打开：%1").arg(dir));
+        emit busy(false);
+        return false;
+    }
     const QModelIndex srcRoot = fsModel_->setRootPath(dir);                        // 异步开始
     if (!srcRoot.isValid()) {
         LOGW(QString("无效目录：%1").arg(dir));
@@ -465,6 +474,7 @@ bool FileService::setProxyRoot(const QString& dir) {
 bool FileService::tryImportDataSetAfterLoaded() {
     if (currentDataSet != DataSet::LabelMaster) {                                  // 开始导入
         auto fail = [&](const QString& tip, const QString& arg) {
+            emit busy(false);
             emit status(tip, 1200);
             LOGE(QString("%1:%2").arg(tip).arg(arg));
         };
@@ -475,17 +485,17 @@ bool FileService::tryImportDataSetAfterLoaded() {
                     fsModel_->index(i, 0, mapFromProxyToSource(target.parent()))); // 获取图片路径
                 const QString labelPath = labelFileForImage(imgPath);              // 计算Label路径
                 if (QFile::exists(labelPath)) {
+                    QBuffer buffer;
+                    buffer.open(QIODevice::ReadWrite);
+                    QTextStream convertStream(&buffer);
+                    QFile labelFile(labelPath);
+                    if (!labelFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                        fail("导入失败!无法打开Label", labelPath);
+                        return false;
+                    }
+                    QTextStream ts(&labelFile);
                     switch (currentDataSet) {
-                    case DataSet::SJTU: {
-                        QBuffer buffer;
-                        buffer.open(QIODevice::ReadWrite);
-                        QTextStream convertStream(&buffer);
-                        QFile labelFile(labelPath);
-                        if (!labelFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                            fail("导入失败!无法打开Label", labelPath);
-                            return false;
-                        }
-                        QTextStream ts(&labelFile);
+                    case DataSet::HITSZ: {                                         // 南工骁鹰
                         while (!ts.atEnd()) {
                             QString raw = ts.readLine();
                             QStringList t;
@@ -562,13 +572,66 @@ bool FileService::tryImportDataSetAfterLoaded() {
                         }
                         break;
                     }
+                    case DataSet::UPC: { // RCS
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                continue;
+                            }
+                            // 格式检查
+                            if (t.size() != 10) {
+                                fail("格式错误!请检查格式是否正确", labelPath);
+                                return false;
+                            }
+
+                            bool ok         = true;
+                            int clsId       = t[1].toInt(&ok);
+                            const int colId = t[0].toInt(&ok);
+                            if (!(clsId >= 0 && clsId < 12) || !(0 <= colId && colId < 4)) {
+                                ok = false;
+                            }
+                            for (int i = 2; i < 10; i++) {
+                                if (std::fabs(t.at(i).toDouble(&ok)) > 1.5) {
+                                    fail("格式错误!请检查格式是否正确!", labelPath);
+                                    return false;
+                                }
+                            }
+                            if (!ok) {
+                                fail("格式错误!请检查格式是否正确", labelPath);
+                                return false;
+                            }
+                            if ((0 <= clsId && clsId < 5) || (clsId > 8 && clsId < 12)) {
+                                convertStream << t.join(" ") << "\n";
+                            } else if (clsId > 5 && clsId < 9) {
+                                clsId--;
+                                t[1] = QString(QChar('0' + clsId));
+                                convertStream << t.join(" ") << "\n";
+                            } else if (clsId == 5) {
+                                t[1] = QString(QChar('5'));
+                                convertStream << t.join(" ") << "\n";
+                            } else {
+                                continue;
+                            }
+                        }
+                        convertStream.seek(0);
+                        QString Text = convertStream.readAll();
+                        buffer.close();
+                        labelFile.close();
+                        if (labelFile.open(QIODevice::WriteOnly)) {
+                            ts << Text;
+                            labelFile.close();
+                        }
+
+                        break;
+                    }
                     default: break;
                     }
-                };
+                }
             }
         } else {
-            fail("导入失败!目标目录无效!", fsModel_->filePath(target));
-            return false;
+                fail("导入失败!目标文件不存在!", fsModel_->filePath(target));
+                return false;
         }
     }
     return true;
@@ -802,7 +865,7 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
                            : colorToken2Letter(t.at(0)); // 字符串 → 字母
 
         okInt       = false;
-        int classId = t.at(0).toInt(&okInt);
+        int classId = t.at(1).toInt(&okInt);
         a.cls   = okInt ? classId2Token(t.at(1).toInt()) : normalizeClasslToken(t.at(1)); // classId
         a.score = 0.f;
 

@@ -295,6 +295,7 @@
       <string>导入其他数据集</string>
      </property>
      <addaction name="actionImport1"/>
+     <addaction name="actionImpor2"/>
     </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
@@ -393,7 +394,7 @@
   </action>
   <action name="actionImport1">
    <property name="text">
-    <string>交龙数据集</string>
+    <string>南工骁鹰数据集</string>
    </property>
   </action>
   <action name="actionStas">
@@ -402,6 +403,11 @@
    </property>
    <property name="shortcut">
     <string>F1</string>
+   </property>
+  </action>
+  <action name="actionImpor2">
+   <property name="text">
+    <string>RCS数据集</string>
    </property>
   </action>
  </widget>
