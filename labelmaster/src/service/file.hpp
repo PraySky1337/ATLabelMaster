@@ -28,10 +28,10 @@ public:
 
 public slots:
     // === 打开 ===
-    void openFolderDialog(const DataSet& type = DataSet::LabelMaster); // 弹框选目录
-    void importFrom(const QAction* action);                            // 导入其他数据集
-    void openPaths(const QStringList&);                                // 拖拽/命令行路径
-    void openIndex(const QModelIndex&);                                // 由文件树激活
+    void openFolderDialog(const DataSet& type = DataSet::LabelMaster2); // 弹框选目录
+    void importFrom(const QAction* action);                             // 导入其他数据集
+    void openPaths(const QStringList&);                                 // 拖拽/命令行路径
+    void openIndex(const QModelIndex&);                                 // 由文件树激活
 
     // === 浏览 ===
     void next(bool allowAutoSave = true);
@@ -44,7 +44,7 @@ public slots:
     void saveData(const QVector<Armor>& armors, const QImage& image, bool needSaveImg);
 
     // === 获取统计信息 ==
-    void getStas(int colorId, int classId);
+    void getStas(int colorId, int classId, int sizeId);
 
 signals:
     // === 给 UI 的输出 ===
@@ -93,8 +93,8 @@ private:
     static QString colorId2Letter(int id);                   // 0/1/2/3→"B/R/G/P"
     static int colorLetter2Id(const QString& letter);        // "B/R/G/P"→0/1/2/3
     static QString normalizeClasslToken(const QString& cls); // "1|2|3|4|G|O|Bs|Bb"
-    static QString classId2Token(const int& Id);
-    static int classToken2Id(const QString& nomalizedToken);
+    static QString idCollect2Token(const int& classId, const int& sizeId);
+    static void classToken2IdCollection(const QString& nomalizedToken, int res[2]);
     static int colorToken2Id(const QString& token);
 
 private:
@@ -106,5 +106,5 @@ private:
     QPersistentModelIndex proxyCurrent_;
     QString currentImagePath_;                               // 当前图片绝对路径
     QSize currentImageSize_;                                 // 当前图片尺寸（归一化需要）
-    DataSet currentDataSet = DataSet::LabelMaster;
+    DataSet currentDataSet = DataSet::LabelMaster2;
 };

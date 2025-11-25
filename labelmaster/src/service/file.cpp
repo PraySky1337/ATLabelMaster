@@ -37,6 +37,8 @@
 #include <qstringalgorithms.h>
 #include <qtimer.h>
 #include <qtmetamacros.h>
+#include <strings.h>
+#include <vector>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 # include <QStringConverter> // Qt6: QTextStream::setEncoding
 #endif
@@ -135,60 +137,94 @@ int FileService::colorToken2Id(const QString& token) {
 int FileService::colorLetter2Id(const QString& letter) {
     const QChar c = letter.trimmed().isEmpty() ? QChar() : letter.trimmed().at(0).toUpper();
     if (c == 'B')
-        return 0;                                               // BLUE
+        return 0; // BLUE
     if (c == 'R')
-        return 1;                                               // RED
+        return 1; // RED
     if (c == 'G')
-        return 2;                                               // GRAY
-    if (c == 'P')                                               // PURPLE
+        return 2; // GRAY
+    if (c == 'P') // PURPLE
         return 3;
-    return 2;                                                   // 默认 GRAY
+    return 2;     // 默认 GRAY
 }
-int FileService::classToken2Id(const QString& NormalizedToken) {
-    if (NormalizedToken == "G") {
-        return 0;
+void FileService::classToken2IdCollection(const QString& NormalizedToken, int res[2]) {
+    res[0]  = 0;  // class size
+    res[1]  = 0;  // 默认哨兵
+    int len = NormalizedToken.length();
+    char ch = NormalizedToken.at(0).toLatin1();
+    switch (ch) {
+    case 'G':
+        if (len == 2) {
+            res[0] = 0;
+            switch (NormalizedToken.at(1).toLatin1()) {
+            case 's': res[1] = 0; break;
+            case 'b': res[1] = 1; break;
+            }
+        }
+        break;
+    case '1':
+    case '2':
+        if (len == 1) {
+            res[0] = ch - '0';
+        }
+        break;
+    case '3':
+    case '4':
+    case '5':
+        if (len == 2 && NormalizedToken.at(0).toLatin1() == 'B') {
+            res[0] = ch - '0';
+            res[1] = 1;
+        } else if (len == 1) {
+            res[0] = ch - '0';
+            res[1] = 0;
+        }
+        break;
+    case 'O':
+        if (len == 1) {
+            res[0] = 6;
+        }
+        break;
+    case 'B':
+        if (len == 2) {
+            res[0] = 7;
+            switch (NormalizedToken.at(1).toLatin1()) {
+            case 's': res[1] = 0; break;
+            case 'b': res[1] = 1; break;
+            }
+        }
+        break;
     }
-    if (NormalizedToken == "1" || NormalizedToken == "2" || NormalizedToken == "3"
-        || NormalizedToken == "4") {
-        return NormalizedToken.toInt();
-    }
-    if (NormalizedToken == "O")
-        return 5;
-    if (NormalizedToken == "Bs")
-        return 6;
-    if (NormalizedToken == "Bb")
-        return 7;
-    if (NormalizedToken == "5") {
-        return 8;
-    }
-    if (NormalizedToken == "B3") {
-        return 9;
-    }
-    if (NormalizedToken == "B4") {
-        return 10;
-    }
-    if (NormalizedToken == "B5") {
-        return 11;
-    }
-    return 0;                                                   // 默认哨兵
 }
-QString FileService::classId2Token(const int& Id) {
-    switch (Id) {
-    case 0: return "G";
-    case 5: return "O";
-    case 6: return "Bs";
-    case 7: return "Bb";
-    case 8: return "5";
-    case 9:
-    case 10:
-    case 11: return "B" + QString(QChar(Id - 6 + '0'));
-    default: return QString(QChar(Id + '0'));
+QString FileService::idCollect2Token(const int& classId, const int& sizeId) {
+    switch (classId) {
+    case 0:
+        switch (sizeId) {
+        case 0: return "Gs";
+        default: return "Gb";
+        }
+    case 1:
+    case 2: return QString(QChar(classId + '0'));
+    case 6: {
+        return "O";
+    };
+    case 7: {
+        switch (sizeId) {
+        case 0: return "Bs";
+        default: return "Bb";
+        }
+    };
+    default:
+        switch (sizeId) {
+        case 0: return QString(QChar(classId + '0'));
+        default: return QString(QChar(classId + '0')) + "B";
+        };
     }
 }
 QString FileService::normalizeClasslToken(const QString& cls) { // 归一化cls
     const QString u = cls.trimmed().toUpper();
-    if (u == "G")
-        return "G";
+    if (u == "GS")
+        return "Gs";
+    if (u == "GB")
+        return "Gb";
     if (u == "O")
         return "O";
     if (u == "BS")
@@ -198,12 +234,12 @@ QString FileService::normalizeClasslToken(const QString& cls) { // 归一化cls
     if (u == "1" || u == "2" || u == "3" || u == "4" || u == "5") {
         return u;
     }
-    if (u.at(0) == 'B') {
+    if (u.at(1) == 'B') {
         bool ok = true;
-        switch (u.at(1).toLatin1() - 48) {
-        case 3: return "B3"; break;
-        case 4: return "B4"; break;
-        case 5: return "B5"; break;
+        switch (u.at(0).toLatin1() - 48) {
+        case 3: return "3B"; break;
+        case 4: return "4B"; break;
+        case 5: return "5B"; break;
         default: break;
         }
     }
@@ -472,7 +508,7 @@ bool FileService::setProxyRoot(const QString& dir) {
     return true;
 }
 bool FileService::tryImportDataSetAfterLoaded() {
-    if (currentDataSet != DataSet::LabelMaster) {                                  // 开始导入
+    if (currentDataSet != DataSet::LabelMaster2) {                                  // 开始导入
         auto fail = [&](const QString& tip, const QString& arg) {
             emit busy(false);
             emit status(tip, 1200);
@@ -495,39 +531,78 @@ bool FileService::tryImportDataSetAfterLoaded() {
                     }
                     QTextStream ts(&labelFile);
                     switch (currentDataSet) {
+                    case DataSet::LabelMaster: {                                   // v1 旧格式
+                        // | color | label |
+                        // | :---: | :---: |
+                        // | 0 |  | G |
+                        // | 1 |  | 1 |
+                        // | 2 |  | 2 |
+                        // | 3 |  | 3 |
+                        // | 4 |  | 4 |
+                        // | 5  | O(前哨站) |
+                        // | 6 | Bs(基地小装甲) | 
+                        // | 7 | Bb(基地大装甲) |
+                        { 
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                                
+                            }
+                           if (clsId > 7 && clsId < 12) {
+                                t.insert(1 , "1");
+                                switch (clsId) {
+                                    case 8:
+                                        t[2] = "7";
+                                        break;
+                                    case 9:
+                                    case 10:
+                                    case 11:
+                                        t[2] = QString(QChar(clsId - 6 + '0'));
+                                }
+                            } else {
+                                t.insert(1 , "0");
+                            }
+                            convertStream << t.join(" ") << "\n";
+                        }
+                        convertStream.seek(0);
+                        QString Text = convertStream.readAll();
+                        buffer.close();
+                        labelFile.close();
+                        if (labelFile.open(QIODevice::WriteOnly)) {
+                            ts << Text;
+                            labelFile.close();
+                        }
+
+                        break;
+                    }
+                        
+                        
+                    }
                     case DataSet::HITSZ: {                                         // 南工骁鹰
                         while (!ts.atEnd()) {
                             QString raw = ts.readLine();
                             QStringList t;
                             if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
                                 continue;
                             }
-                            // 格式检查
-                            if (t.size() != 10) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
-                            }
-
-                            bool ok         = true;
-                            int clsId       = t[t.size() - 2].toInt(&ok);
-                            const int colId = t[t.size() - 1].toInt(&ok);
-                            if (!(clsId >= 0 && clsId < 12) || !(0 <= colId && colId < 4)) {
-                                ok = false;
-                            }
-                            for (int i = 0; i < 8; i++) {
-                                if (std::fabs(t.at(i).toDouble(&ok)) > 1.5) {
-                                    fail("格式错误!请检查格式是否正确!", labelPath);
-                                    return false;
-                                }
-                            }
-                            if (!ok) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(t, colorId, clsId, sizeId,currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
                             }
                             for (int i = 2; i > 0; i--) {
-
                                 t.move(t.size() - i, 0);
                             }
+                            //[目标各点的x、y归一化坐标] <目标类id> <目标颜色id>
                             // 颜色字段:id
                             // 装甲板标注目标ID见下表
                             // 贴纸	ID
@@ -549,18 +624,21 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             // Red	1
                             // N（熄灭) 2
                             // Purple	3
-                            if ((0 <= clsId && clsId < 5) || (clsId > 8 && clsId < 12)) {
-                                convertStream << t.join(" ") << "\n";
-                            } else if (clsId > 5 && clsId < 9) {
-                                clsId--;
-                                t[1] = QString(QChar('0' + clsId));
-                                convertStream << t.join(" ") << "\n";
-                            } else if (clsId == 5) {
-                                t[1] = QString(QChar('5'));
-                                convertStream << t.join(" ") << "\n";
+                            if (clsId > 7 && clsId < 12) {
+                                t.insert(1 , "1");
+                                switch (clsId) {
+                                    case 8:
+                                        t[2] = "7";
+                                        break;
+                                    case 9:
+                                    case 10:
+                                    case 11:
+                                        t[2] = QString(QChar(clsId - 6 + '0'));
+                                }
                             } else {
-                                continue;
+                                t.insert(1 , "0");
                             }
+                            convertStream << t.join(" ") << "\n";
                         }
                         convertStream.seek(0);
                         QString Text = convertStream.readAll();
@@ -577,42 +655,30 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             QString raw = ts.readLine();
                             QStringList t;
                             if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
                                 continue;
                             }
-                            // 格式检查
-                            if (t.size() != 10) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                                
                             }
-
-                            bool ok         = true;
-                            int clsId       = t[1].toInt(&ok);
-                            const int colId = t[0].toInt(&ok);
-                            if (!(clsId >= 0 && clsId < 12) || !(0 <= colId && colId < 4)) {
-                                ok = false;
-                            }
-                            for (int i = 2; i < 10; i++) {
-                                if (std::fabs(t.at(i).toDouble(&ok)) > 1.5) {
-                                    fail("格式错误!请检查格式是否正确!", labelPath);
-                                    return false;
+                           if (clsId > 7 && clsId < 12) {
+                                t.insert(1 , "1");
+                                switch (clsId) {
+                                    case 8:
+                                        t[2] = "7";
+                                        break;
+                                    case 9:
+                                    case 10:
+                                    case 11:
+                                        t[2] = QString(QChar(clsId - 6 + '0'));
                                 }
-                            }
-                            if (!ok) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
-                            }
-                            if ((0 <= clsId && clsId < 5) || (clsId > 8 && clsId < 12)) {
-                                convertStream << t.join(" ") << "\n";
-                            } else if (clsId > 5 && clsId < 9) {
-                                clsId--;
-                                t[1] = QString(QChar('0' + clsId));
-                                convertStream << t.join(" ") << "\n";
-                            } else if (clsId == 5) {
-                                t[1] = QString(QChar('5'));
-                                convertStream << t.join(" ") << "\n";
                             } else {
-                                continue;
+                                t.insert(1 , "0");
                             }
+                            convertStream << t.join(" ") << "\n";
                         }
                         convertStream.seek(0);
                         QString Text = convertStream.readAll();
@@ -630,8 +696,8 @@ bool FileService::tryImportDataSetAfterLoaded() {
                 }
             }
         } else {
-                fail("导入失败!目标文件不存在!", fsModel_->filePath(target));
-                return false;
+            fail("导入失败!目标文件不存在!", fsModel_->filePath(target));
+            return false;
         }
     }
     return true;
@@ -803,19 +869,21 @@ bool FileService::writeLabelFile(
     ts.setCodec("UTF-8");
 #endif
     ts.setRealNumberNotation(QTextStream::FixedNotation);
-    ts.setRealNumberPrecision(6);                                       // 保留 6 位小数
+    ts.setRealNumberPrecision(6);                                        // 保留 6 位小数
 
     const double W = double(imgSize.width());
     const double H = double(imgSize.height());
     auto norm      = [&](const QPointF& p) { return QPointF(p.x() / W, p.y() / H); };
 
     for (const auto& a : armors) {
-        const int colorId = colorLetter2Id(a.color);                    // 0/1/2/3
-        const int labelId = classToken2Id(normalizeClasslToken(a.cls)); // 字符串
+        const int colorId = colorLetter2Id(a.color);
+        int idCollect[2];                                                // class size
+        classToken2IdCollection(normalizeClasslToken(a.cls), idCollect); // 字符串
 
         const QPointF q0 = norm(a.p0), q1 = norm(a.p1), q2 = norm(a.p2), q3 = norm(a.p3);
-        ts << colorId << ' ' << labelId << ' ' << q0.x() << ' ' << q0.y() << ' ' << q1.x() << ' '
-           << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' ' << q3.y() << '\n';
+        ts << colorId << ' ' << idCollect[1] << idCollect[0] << ' ' << q0.x() << ' ' << q0.y()
+           << ' ' << q1.x() << ' ' << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x()
+           << ' ' << q3.y() << '\n';
     }
     return true;
 }
@@ -844,9 +912,9 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         if (line.isEmpty())
             continue;
 
-        // color label x1 y1 x2 y2 x3 y3 x4 y4
+        // color size label x1 y1 x2 y2 x3 y3 x4 y4
         const QStringList t = line.simplified().split(' ');
-        if (t.size() != 10)
+        if (t.size() != 11)
             continue;
 
         bool ok  = true;
@@ -858,17 +926,17 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         };
 
         Armor a;
-        // 颜色字段：兼容“数字或字符串”
-        bool okInt = false;
-        int cid    = t.at(0).toInt(&okInt);
-        a.color    = okInt ? colorId2Letter(cid)         // 数字 → 字母
-                           : colorToken2Letter(t.at(0)); // 字符串 → 字母
-
-        okInt       = false;
-        int classId = t.at(1).toInt(&okInt);
-        a.cls   = okInt ? classId2Token(t.at(1).toInt()) : normalizeClasslToken(t.at(1)); // classId
-        a.score = 0.f;
-
+        // 颜色字段：兼容“数字"
+        bool okInt  = false;
+        int colorId = t.at(0).toInt(&okInt);
+        int sizeId  = t.at(1).toInt(&okInt);
+        int classId = t.at(2).toInt(&okInt);
+        if (!okInt) {
+            continue;
+        }
+        a.color   = colorId2Letter(colorId);
+        a.cls     = idCollect2Token(classId, sizeId);
+        a.score   = 0.f;
         double x0 = tod(2), y0 = tod(3), x1 = tod(4), y1 = tod(5), x2 = tod(6), y2 = tod(7),
                x3 = tod(8), y3 = tod(9);
         if (!ok)
@@ -945,7 +1013,7 @@ void FileService::saveData(const QVector<Armor>& armors, const QImage& image, bo
     }
 }
 // 获取统计数据
-void FileService::getStas(int colorId, int classId) {
+void FileService::getStas(int colorId, int classId, int sizeId) {
     // 开始统计
     int sum            = 0;
     QModelIndex parent = proxyCurrent_.parent();
@@ -961,11 +1029,13 @@ void FileService::getStas(int colorId, int classId) {
                     if (!StringProcess::processLabelString(ts.readLine(), t)) {
                         continue;
                     }
-                    bool ok      = false;
-                    int colId    = t.at(0).toInt(&ok);
-                    colId        = ok ? colId : colorToken2Id(t.at(0));
-                    int clsId    = t.at(1).toInt(&ok);
-                    clsId        = ok ? clsId : classToken2Id(normalizeClasslToken(t.at(1)));
+                    bool ok   = false;
+                    int colId = t.at(0).toInt(&ok);
+                    int sId   = t.at(1).toInt(&ok);
+                    int clsId = t.at(2).toInt(&ok);
+                    if (!ok) {
+                        continue;
+                    }
                     auto checkId = [&](const int& value, const int& target) {
                         if (target == -1) {
                             return true;
@@ -976,10 +1046,9 @@ void FileService::getStas(int colorId, int classId) {
                         }
                         return false;
                     };
-                    if (checkId(colId, colorId)) {
-                        if (checkId(clsId, classId)) {
-                            sum++;
-                        }
+                    if (checkId(colId, colorId) && checkId(sId, sizeId)
+                        && checkId(clsId, classId)) {
+                        sum++;
                     }
                 }
             }

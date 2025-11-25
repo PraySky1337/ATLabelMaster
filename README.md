@@ -16,8 +16,8 @@ color label x1 y1 x2 y2 x3 y3 x4 y4
 | 2 | GRAY |
 | 3 | PURPLE |
 
-### Label
-| int | label |
+### Label V1.0
+| color | label |
 | :---: | :---: |
 | 0 |  | G |
 | 1 |  | 1 |
@@ -27,6 +27,19 @@ color label x1 y1 x2 y2 x3 y3 x4 y4
 | 5  | O(前哨站) |
 | 6 | Bs(基地小装甲) | 
 | 7 | Bb(基地大装甲) |
+
+### Label V2.0
+| color | size | label |
+| :---: | :---: | :---: |
+| 0 | 0 / 1 | Gs / Gb |
+| 1 | 0     | 1 |
+| 2 | 0     | 2 |
+| 3 | 0 / 1 | 3 / 3B |
+| 4 | 0 / 1 | 4 / 4B |
+| 5 | 0 / 1 | 5 / 5B |
+| 6 | 0     | O(前哨站) |
+| 7 | 0 / 1 |Bs(基地小装甲) / Bb(基地大装甲) | 
+
 
 ### Point
 从左上角开始逆时针排列

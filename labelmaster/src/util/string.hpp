@@ -1,4 +1,5 @@
 #pragma once
+#include "service/file.hpp"
 #include <QBuffer>
 #include <QDir>
 #include <QFile>
@@ -14,6 +15,8 @@
 #include <QTimer>
 #include <QUrl>
 #include <cmath>
+#include <cstddef>
+#include <opencv2/highgui.hpp>
 #include <qabstractitemmodel.h>
 #include <qbuffer.h>
 #include <qdebug.h>
@@ -22,6 +25,7 @@
 #include <qhashfunctions.h>
 #include <qiodevicebase.h>
 #include <qlist.h>
+#include <qlocale.h>
 #include <qmath.h>
 #include <qnamespace.h>
 #include <qpointer.h>
@@ -38,9 +42,60 @@ inline bool processLabelString(QString raw, QStringList& result) {
     if (line.isEmpty())
         return false;
     const QStringList list = line.simplified().split(' ');
-    if (list.size() != 10)
-        return false;
-    result = list;
+    result                 = list;
     return true;
 }
+inline bool InitLabelInfo(
+    const QStringList& label, int& colorId, int& classId, int& sizeId, DataSet dataset) {
+    const int colorCounts = 4;
+    int corLabelSize;
+    int classCounts;
+    int posStart = 2;
+    sizeId       = 0;
+    bool ok      = true;
+    switch (dataset) {
+    case DataSet::LabelMaster:
+        colorId      = label[0].toInt(&ok);
+        classId      = label[1].toInt(&ok);
+        classCounts  = 8;
+        corLabelSize = 10;
+        break;
+    case DataSet::LabelMaster2:
+        colorId      = label[0].toInt(&ok);
+        sizeId       = label[1].toInt(&ok);
+        classId      = label[2].toInt(&ok);
+        posStart     = 3;
+        classCounts  = 8;
+        corLabelSize = 11;
+        break;
+    case DataSet::HITSZ:
+        colorId      = label[label.size() - 1].toInt(&ok);
+        classId      = label[label.size() - 2].toInt(&ok);
+        posStart     = 0;
+        classCounts  = 12;
+        corLabelSize = 10;
+        break;
+    case DataSet::UPC:
+        colorId      = label[0].toInt(&ok);
+        classId      = label[1].toInt(&ok);
+        classCounts  = 12;
+        corLabelSize = 10;
+        break;
+    default: return false;
+    }
+    if (!ok) {
+        return false;
+    }
+    for (int i = posStart; i < posStart + 8; i++) {
+        if (std::fabs(label.at(i).toDouble(&ok)) > 1.5) {
+            return false;
+        }
+    }
+    if (corLabelSize != label.size() || (classId < 0 && classId >= classCounts)
+        || (colorId < 0 && colorId >= colorCounts) || sizeId > 1 || sizeId < 0) {
+        return false;
+    }
+    return true;
+};
+
 } // namespace StringProcess
