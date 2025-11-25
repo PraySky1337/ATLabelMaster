@@ -13,7 +13,7 @@ public:
     explicit StasDialog(QWidget* parent = nullptr);
 
 signals:
-    void getStasRequested(int colorId = -1, int classId = -1);
+    void getStasRequested(int colorId = -1, int classId = -1, int sizeId = 0);
 
 private:
     Ui::StasDialog* ui;

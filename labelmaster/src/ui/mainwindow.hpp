@@ -40,7 +40,7 @@ signals:
     void sigDeleteRequested();
     void sigSmartAnnotateRequested();
     void sigSettingsRequested();
-    void sigGetStasRequested(int colorId , int classId);
+    void sigGetStasRequested(int colorId , int classId, int sizeId);
     void sigFileActivated(const QModelIndex&);
     void sigDroppedPaths(const QStringList&);
     void sigKeyCommand(const QString&);

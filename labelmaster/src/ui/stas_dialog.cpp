@@ -18,8 +18,8 @@ void ui::StasDialog::updateStasData(int count) {
     ui->dataLabel->setText(QString(str));
 }
 void ui::StasDialog::startStas() {
-    int colorId = ui->colorCombo->currentIndex() - 1;
-    int classId = ui->classCombo->currentIndex() - 1;
-
-    emit getStasRequested(colorId, classId);
+    int colorId = ui->colorCombo->currentIndex() - 1; // -1 ALL
+    int classId = ui->classCombo->currentIndex() - 1; //- 1 ALL
+    int sizeId  = ui->sizeCombo->currentIndex();
+    emit getStasRequested(colorId, classId, sizeId);
 }

@@ -87,24 +87,14 @@ private:
     static QVector<Armor>
         readLabelFile(const QString& labelPath, const QSize& imgSize); // 自动反归一化
 
-    // 字段规范化
-    static QString colorLetter2Token(const QString& letter); // "B"→"BLUE" 等
-    static QString colorToken2Letter(const QString& tk);     // "BLUE"→"B" 等
-    static QString colorId2Letter(int id);                   // 0/1/2/3→"B/R/G/P"
-    static int colorLetter2Id(const QString& letter);        // "B/R/G/P"→0/1/2/3
-    static QString normalizeClasslToken(const QString& cls); // "1|2|3|4|G|O|Bs|Bb"
-    static QString idCollect2Token(const int& classId, const int& sizeId);
-    static void classToken2IdCollection(const QString& nomalizedToken, int res[2]);
-    static int colorToken2Id(const QString& token);
-
 private:
     QString pendingDir_;
     QString pendingTargetPath_;
-    QFileSystemModel* fsModel_    = nullptr;                 // 源模型
-    QSortFilterProxyModel* proxy_ = nullptr;                 // 只显示图片与目录
+    QFileSystemModel* fsModel_    = nullptr;                           // 源模型
+    QSortFilterProxyModel* proxy_ = nullptr;                           // 只显示图片与目录
     QPersistentModelIndex proxyRoot_;
     QPersistentModelIndex proxyCurrent_;
-    QString currentImagePath_;                               // 当前图片绝对路径
-    QSize currentImageSize_;                                 // 当前图片尺寸（归一化需要）
+    QString currentImagePath_;                                         // 当前图片绝对路径
+    QSize currentImageSize_;                                           // 当前图片尺寸（归一化需要）
     DataSet currentDataSet = DataSet::LabelMaster2;
 };

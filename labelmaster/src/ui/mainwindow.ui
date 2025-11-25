@@ -296,6 +296,7 @@
      </property>
      <addaction name="actionImport1"/>
      <addaction name="actionImpor2"/>
+     <addaction name="actionLabelMasterV1"/>
     </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
@@ -408,6 +409,11 @@
   <action name="actionImpor2">
    <property name="text">
     <string>RCS数据集</string>
+   </property>
+  </action>
+  <action name="actionLabelMasterV1">
+   <property name="text">
+    <string>LabelMasterV1数据集</string>
    </property>
   </action>
  </widget>

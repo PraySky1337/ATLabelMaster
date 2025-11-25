@@ -1,5 +1,6 @@
 #include "info_dialog.h"
 #include "ui_info_dialog.h"
+#include <qcombobox.h>
 #include <qdialog.h>
 #include <qglobal.h>
 #include <qguiapplication_platform.h>
@@ -22,7 +23,7 @@ InfoDialog::~InfoDialog() { delete this->ui; }
 void InfoDialog::reject() { this->done(1); }
 // 确定
 void InfoDialog::accept() {
-    QString text = ui->comboBox->currentText();
+    QString text = ui->colorCombo->currentText();
     if (text == "Red") {
         text = "R";
     } else if (text == "Blue") {
@@ -32,11 +33,13 @@ void InfoDialog::accept() {
     } else {
         text = "G";
     }
-    emit InfoGetted(this->ui->lineEdit->text(), text, _isCurrent);
+    emit InfoGetted(
+        this->ui->classCombo->currentText(), text, ui->sizeCombo->currentIndex(), _isCurrent);
     this->done(1);
 }
 void InfoDialog::updateInfo(
-    bool isCurrent, const QString& defaultClass, const QString& defaultColor) {
+    bool isCurrent, const QString& defaultClass, const QString& defaultColor,
+    const int& defaultSize) {
     QString Color;
     if (defaultColor == "R") {
         Color = "Red";
@@ -48,6 +51,17 @@ void InfoDialog::updateInfo(
         Color = "Gray";
     }
     _isCurrent = isCurrent;
-    ui->comboBox->setCurrentText(Color);
-    ui->lineEdit->setText(defaultClass);
+    ui->colorCombo->setCurrentText(Color);
+    ui->sizeCombo->setCurrentIndex(defaultSize);
+    ui->classCombo->setCurrentText(defaultClass);
+    connect(
+        ui->classCombo, &QComboBox::currentIndexChanged, this,
+        &InfoDialog::updateSize); // 接收到初始数据后再连接
+}
+void InfoDialog::updateSize(int index) {
+    if (index != 1) {
+        ui->sizeCombo->setCurrentIndex(0);
+    } else {
+        ui->sizeCombo->setCurrentIndex(1);
+    }
 }

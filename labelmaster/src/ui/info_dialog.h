@@ -4,6 +4,7 @@
 #include <qglobal.h>
 #include <qguiapplication_platform.h>
 #include <qobjectdefs.h>
+#include <qstringconverter.h>
 #include <qtmetamacros.h>
 #include <qwidget.h>
 namespace ui {
@@ -16,14 +17,15 @@ public:
     // void centerOn(QWidget* parent);
     void updateInfo(
         bool isCurrent = false, const QString& defaultClass = "unknown",
-        const QString& defaultColor = "Gray");
+        const QString& defaultColor = "Gray", const int& defaultSize = 0);
 signals:
-    void InfoGetted(QString EditedClass, QString Color, bool isCurrent);
+    void InfoGetted(QString editedClass, QString color, int size, bool isCurrent);
 public slots:
     void reject() override;
     void accept() override;
 
 private:
+    void updateSize(int index);
     bool _isCurrent = false;
     Ui::InfoDialog* ui;
 };

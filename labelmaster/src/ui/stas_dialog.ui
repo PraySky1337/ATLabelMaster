@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>100</x>
-     <y>80</y>
+     <y>40</y>
      <width>211</width>
-     <height>111</height>
+     <height>151</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -61,7 +61,27 @@
         </item>
         <item>
          <property name="text">
+          <string>B3</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
           <string>4</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B4</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B5</string>
          </property>
         </item>
         <item>
@@ -77,26 +97,6 @@
         <item>
          <property name="text">
           <string>Bb</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>5</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>B3</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>B4</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>B5</string>
          </property>
         </item>
        </widget>
@@ -142,6 +142,31 @@
         <item>
          <property name="text">
           <string/>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Size:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="sizeCombo">
+        <item>
+         <property name="text">
+          <string>Small</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Big</string>
          </property>
         </item>
        </widget>
