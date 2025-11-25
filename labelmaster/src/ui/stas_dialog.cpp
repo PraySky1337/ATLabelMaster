@@ -12,14 +12,13 @@ ui::StasDialog::StasDialog(QWidget* parent)
     this->setWindowTitle("Data Statistic");
 }
 void ui::StasDialog::accept() { this->done(1); }
-void ui::StasDialog::updateStasData(int count) {
-    QString str = "共有: 个目标";
-    str.insert(4, QString::number(count));
+void ui::StasDialog::updateStasData(const int& targetCount, const int& fileCount) {
+    QString str = QString("共有%0个目标存在于%1张图片").arg(targetCount).arg(fileCount);
     ui->dataLabel->setText(QString(str));
 }
 void ui::StasDialog::startStas() {
     int colorId = ui->colorCombo->currentIndex() - 1; // -1 ALL
     int classId = ui->classCombo->currentIndex() - 1; //- 1 ALL
-    int sizeId  = ui->sizeCombo->currentIndex();
+    int sizeId  = ui->sizeCombo->currentIndex() - 1;  // -1 ALL
     emit getStasRequested(colorId, classId, sizeId);
 }

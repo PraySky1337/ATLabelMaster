@@ -16,8 +16,8 @@ public:
     ~InfoDialog();
     // void centerOn(QWidget* parent);
     void updateInfo(
-        bool isCurrent = false, const QString& defaultClass = "unknown",
-        const QString& defaultColor = "Gray", const int& defaultSize = 0);
+        bool isCurrent = false, const int& defaultClassId = 0, const int& defaultColorId = 0,
+        const int& defaultSize = 0);
 signals:
     void InfoGetted(QString editedClass, QString color, int size, bool isCurrent);
 public slots:

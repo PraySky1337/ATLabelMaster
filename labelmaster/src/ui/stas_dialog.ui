@@ -61,17 +61,7 @@
         </item>
         <item>
          <property name="text">
-          <string>B3</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
           <string>4</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>B4</string>
          </property>
         </item>
         <item>
@@ -81,22 +71,12 @@
         </item>
         <item>
          <property name="text">
-          <string>B5</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
           <string>O</string>
          </property>
         </item>
         <item>
          <property name="text">
-          <string>Bs</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Bb</string>
+          <string>B</string>
          </property>
         </item>
        </widget>
@@ -139,11 +119,6 @@
           <string>Purple</string>
          </property>
         </item>
-        <item>
-         <property name="text">
-          <string/>
-         </property>
-        </item>
        </widget>
       </item>
      </layout>
@@ -159,6 +134,11 @@
       </item>
       <item>
        <widget class="QComboBox" name="sizeCombo">
+        <item>
+         <property name="text">
+          <string>All</string>
+         </property>
+        </item>
         <item>
          <property name="text">
           <string>Small</string>
@@ -178,9 +158,9 @@
   <widget class="QLabel" name="dataLabel">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>100</x>
      <y>200</y>
-     <width>131</width>
+     <width>211</width>
      <height>41</height>
     </rect>
    </property>

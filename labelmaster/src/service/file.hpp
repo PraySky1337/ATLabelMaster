@@ -58,7 +58,7 @@ signals:
     // === 打开图片时加载到的标注 ===
     void labelsLoaded(const QVector<Armor>& armors);
     // ===统计信息获取==
-    void StasGetted(const int& count);
+    void StasGetted(const int& targetCount, const int& fileCount);
     // ===自动保存===
     void saveRequested();
 

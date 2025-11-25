@@ -943,8 +943,8 @@ void ImageCanvas::promptEditSelectedInfo(bool isCurrent) {
         dialog->updateInfo(true);
     } else {
         dialog->updateInfo(
-            false, dets_[selectedIndex_].cls, dets_[selectedIndex_].color,
-            dets_[selectedIndex_].size);
+            false, IdConvert::classToken2Id(dets_[selectedIndex_].cls),
+            IdConvert::colorLetter2Id(dets_[selectedIndex_].color), dets_[selectedIndex_].size);
     }
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();

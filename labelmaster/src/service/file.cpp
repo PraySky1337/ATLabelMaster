@@ -710,9 +710,9 @@ bool FileService::writeLabelFile(
                                   // idCollect); // 字符串
 
         const QPointF q0 = norm(a.p0), q1 = norm(a.p1), q2 = norm(a.p2), q3 = norm(a.p3);
-        ts << colorId << ' ' << a.size << classId << ' ' << q0.x() << ' ' << q0.y() << ' ' << q1.x()
-           << ' ' << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' ' << q3.y()
-           << '\n';
+        ts << colorId << ' ' << a.size << ' ' << classId << ' ' << q0.x() << ' ' << q0.y() << ' '
+           << q1.x() << ' ' << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' '
+           << q3.y() << '\n';
     }
     return true;
 }
@@ -845,9 +845,11 @@ void FileService::saveData(const QVector<Armor>& armors, const QImage& image, bo
 // 获取统计数据
 void FileService::getStas(int colorId, int classId, int sizeId) {
     // 开始统计
-    int sum            = 0;
+    int targetCount    = 0;
+    int fileCount      = 0;
     QModelIndex parent = proxyCurrent_.parent();
     for (int i = 0; i < proxy_->rowCount(parent); i++) {
+        int hasTarget   = false;
         QString imgPath = fsModel_->filePath(fsModel_->index(i, 0, mapFromProxyToSource(parent)));
         const QString labelPath = labelFileForImage(imgPath);
         if (QFile::exists(labelPath)) {
@@ -878,11 +880,15 @@ void FileService::getStas(int colorId, int classId, int sizeId) {
                     };
                     if (checkId(colId, colorId) && checkId(sId, sizeId)
                         && checkId(clsId, classId)) {
-                        sum++;
+                        targetCount++;
+                        hasTarget = true;
                     }
+                }
+                if (hasTarget) {
+                    fileCount++;
                 }
             }
         }
     }
-    emit StasGetted(sum);
+    emit StasGetted(targetCount, fileCount);
 }
