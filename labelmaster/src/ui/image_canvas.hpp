@@ -182,7 +182,7 @@ private:
     int currentSize_ = 0;
     QString currentClass_;
     QString currentColor_;
-    QHash<int ,QHash<int, QSvgRenderer*>> svgCache_;
+    QHash<int, QHash<int, QSvgRenderer*>> svgCache_;
 
     // 参数
     const double kMinScale_  = 0.2;

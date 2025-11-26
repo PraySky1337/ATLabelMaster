@@ -294,9 +294,10 @@
      <property name="title">
       <string>导入其他数据集</string>
      </property>
-     <addaction name="actionImport1"/>
-     <addaction name="actionImpor2"/>
-     <addaction name="actionLabelMasterV1"/>
+     <addaction name="actionLMV1"/>
+     <addaction name="actionHITSZ"/>
+     <addaction name="actionUPC"/>
+     <addaction name="actionNMPU"/>
     </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
@@ -393,9 +394,9 @@
     <string>Esc</string>
    </property>
   </action>
-  <action name="actionImport1">
+  <action name="actionLMV1">
    <property name="text">
-    <string>南工骁鹰数据集</string>
+    <string>LabelMasterV1数据集</string>
    </property>
   </action>
   <action name="actionStas">
@@ -406,14 +407,19 @@
     <string>F1</string>
    </property>
   </action>
-  <action name="actionImpor2">
+  <action name="actionHITSZ">
    <property name="text">
-    <string>RCS数据集</string>
+    <string>南工骁鹰(HITSZ)数据集</string>
    </property>
   </action>
-  <action name="actionLabelMasterV1">
+  <action name="actionUPC">
    <property name="text">
-    <string>LabelMasterV1数据集</string>
+    <string>RPS(UPC)数据集</string>
+   </property>
+  </action>
+  <action name="actionNMPU">
+   <property name="text">
+    <string>NMPU数据集</string>
    </property>
   </action>
  </widget>

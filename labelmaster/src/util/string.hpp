@@ -16,6 +16,7 @@
 #include <QUrl>
 #include <cmath>
 #include <cstddef>
+#include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
 #include <qabstractitemmodel.h>
 #include <qbuffer.h>
@@ -55,8 +56,12 @@ inline bool InitLabelInfo(
     bool ok      = true;
     switch (dataset) {
     case DataSet::LabelMaster:
-        colorId      = label[0].toInt(&ok);
-        classId      = label[1].toInt(&ok);
+        colorId = label[0].toInt(&ok);
+        classId = label[1].toInt(&ok);
+        if (classId == 1) {
+            sizeId = 1;
+        }
+        posStart     = 2;
         classCounts  = 8;
         corLabelSize = 10;
         break;
@@ -69,18 +74,46 @@ inline bool InitLabelInfo(
         corLabelSize = 11;
         break;
     case DataSet::HITSZ:
-        colorId      = label[label.size() - 1].toInt(&ok);
-        classId      = label[label.size() - 2].toInt(&ok);
+        colorId = label[label.size() - 1].toInt(&ok);
+        classId = label[label.size() - 2].toInt(&ok);
+        switch (classId) {
+        case 1:
+        case 8:
+        case 9:
+        case 10:
+        case 11: sizeId = 1;
+        }
         posStart     = 0;
         classCounts  = 12;
         corLabelSize = 10;
         break;
     case DataSet::UPC:
-        colorId      = label[0].toInt(&ok);
-        classId      = label[1].toInt(&ok);
+        colorId = label[0].toInt(&ok);
+        classId = label[1].toInt(&ok);
+        switch (classId) {
+        case 1:
+        case 8:
+        case 9:
+        case 10:
+        case 11: sizeId = 1;
+        }
+        posStart     = 2;
         classCounts  = 12;
         corLabelSize = 10;
         break;
+    case DataSet::NWPU: {
+        int normalizedId = label[0].toInt(&ok);
+        colorId          = normalizedId / 16;
+        int remain       = normalizedId % 16;
+        sizeId           = remain / 8;
+        classId          = remain % 8;
+        posStart         = 1;
+        classCounts      = 8;
+        corLabelSize     = 9;
+
+    }
+
+    break;
     default: return false;
     }
     if (!ok) {

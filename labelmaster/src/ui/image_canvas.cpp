@@ -1034,7 +1034,7 @@ void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
         }
         auto it = hash->find(size);
         if (it == hash->end() || it.value() == nullptr) {
-            qWarning() << "SVG not found for type and size" << a.cls << (a.size ? "Small" : "Big");
+            qWarning() << "SVG not found for type and size" << a.cls << (a.size ? "Big" : "Small");
             continue;
         }
         QSvgRenderer* renderer = it.value();

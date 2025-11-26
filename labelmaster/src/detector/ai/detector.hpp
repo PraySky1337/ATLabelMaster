@@ -1,14 +1,14 @@
 #pragma once
 #include <QDebug>
 #include <QFile>
-#include <QVector>
 #include <QHash>
+#include <QVector>
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <opencv2/imgproc.hpp>
 #include <openvino/openvino.hpp>
-#include <types.hpp>                                             // Armor 定义
+#include <types.hpp>         // Armor 定义
 
 namespace ai {
 
@@ -18,20 +18,24 @@ struct Detector {
     enum class Mode { OV_INT8_CPU, OV_FP32_CPU };
 
     void setupModel(const QString& assets_path) {
-        label_map_[0] = "0";
+        label_map_[0] = "G";
         label_map_[1] = "1";
         label_map_[2] = "2";
         label_map_[3] = "3";
         label_map_[4] = "4";
         label_map_[5] = "5";
-        label_map_[6] = "5";
-        label_map_[7] = "5";
-        label_map_[8] = "Bb";
-        label_map_[9] = "Bs";
-        label_map_[10] = "Bs";
-        label_map_[11] = "Bs";
-        label_map_[12] = "Bs";
-        label_map_[12] = "13";
+        label_map_[6] = "O";
+        label_map_[7] = "B"; // Bs
+        label_map_[8] = "B"; // Bb
+        // G（哨兵） 	0
+        // 1（一号） 	1
+        // 2（二号） 	2
+        // 3（三号） 	3
+        // 4（四号） 	4
+        // 5（五号） 	5
+        // O（前哨站） 	6
+        // Bs（基地） 	7
+        // Bb（基地大装甲） 	8
 
         const QString dir = assets_path + "/models/";
         try {
@@ -141,14 +145,21 @@ struct Detector {
             a.p3 = QPointF(r[6] / scale, r[7] / scale);
 
             // 颜色 4 类 & 标签 9 类
+            // G（哨兵） 	0
+            // 1（一号） 	1
+            // 2（二号） 	2
+            // 3（三号） 	3
+            // 4（四号） 	4
+            // 5（五号） 	5
+            // O（前哨站） 	6
+            // Bs（基地） 	7
+            // Bb（基地大装甲） 	8
+            // 无法识别B3 B4 B5
             const int color_id = argmax(r + 9, 4);
             const int tag_id   = argmax(r + 13, 9);
-            a.color =
-                (color_id == 0   ? "B"
-                 : color_id == 1 ? "R"
-                 : color_id == 2 ? "G"
-                                 : "P");
-            a.cls = label_map_[tag_id];
+            a.color = (color_id == 0 ? "B" : color_id == 1 ? "R" : color_id == 2 ? "G" : "P");
+            a.cls   = label_map_[tag_id];
+            a.size  = tag_id == 1 || tag_id == 8;
 
             cand.push_back(a);
         }
