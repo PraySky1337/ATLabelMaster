@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=LabelMaster
+Comment=Label Tool for AT
+Exec=/opt/labelmaster/labelmaster.sh
+Icon=/usr/share/icons/hicolor/256x256/apps/labelmaster.png
+Type=Application
+Categories=Utility
+StartupWMClass=LabelMaster
+Keywords=labelmaster;LabelMaster;Label;label;

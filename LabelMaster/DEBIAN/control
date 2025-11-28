@@ -1,0 +1,7 @@
+Package: labelmaster
+Version: 1.1.0
+Architecture: amd64
+Maintainer: PraySky1337 <3159890292@qq.com>
+Section: utils
+Description: Label Tools For AT
+Depends: libc6, libgcc-s1, libstdc++6, libsystemd0, libdbus-1-3, libglib2.0-0, libx11-6, libgl1, libglx0, libegl1, libglvnd0
