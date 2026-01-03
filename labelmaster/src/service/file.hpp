@@ -28,7 +28,7 @@ public:
 
 public slots:
     // === 打开 ===
-    void openFolderDialog(const DataSet& type = DataSet::LabelMaster2); // 弹框选目录
+    void openFolderDialog(const DataSet& type = DataSet::LabelMaster3); // 弹框选目录
     void importFrom(const QAction* action);                             // 导入其他数据集
     void openPaths(const QStringList&);                                 // 拖拽/命令行路径
     void openIndex(const QModelIndex&);                                 // 由文件树激活
@@ -96,5 +96,5 @@ private:
     QPersistentModelIndex proxyCurrent_;
     QString currentImagePath_;                                         // 当前图片绝对路径
     QSize currentImageSize_;                                           // 当前图片尺寸（归一化需要）
-    DataSet currentDataSet = DataSet::LabelMaster2;
+    DataSet currentDataSet = DataSet::LabelMaster3;
 };

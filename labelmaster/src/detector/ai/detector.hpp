@@ -157,6 +157,9 @@ struct Detector {
             // 无法识别B3 B4 B5
             const int color_id = argmax(r + 9, 4);
             const int tag_id   = argmax(r + 13, 9);
+            if (tag_id == 5) { // not detect 5
+                continue;
+            }
             a.color = (color_id == 0 ? "B" : color_id == 1 ? "R" : color_id == 2 ? "G" : "P");
             a.cls   = label_map_[tag_id];
             a.size  = tag_id == 1 || tag_id == 8;
