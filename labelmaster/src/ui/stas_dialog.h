@@ -13,7 +13,7 @@ public:
     explicit StasDialog(QWidget* parent = nullptr);
 
 signals:
-    void getStasRequested(int colorId = -1, int classId = -1);
+    void getStasRequested(int colorId = -1, int classId = -1, int sizeId = -1);
 
 private:
     Ui::StasDialog* ui;
@@ -21,7 +21,7 @@ private slots:
     void accept() override;
 
 public slots:
-    void updateStasData(int const);
+    void updateStasData(const int& targetCount, const int& fileCount);
     void startStas();
 };
 } // namespace ui

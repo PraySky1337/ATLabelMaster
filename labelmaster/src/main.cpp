@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 
     // MainWindow <-> FileService 其他连接保持
     QObject::connect(&w, &ui::MainWindow::sigOpenFolderRequested, &files, [&]() {
-        files.openFolderDialog(DataSet::LabelMaster);
+        files.openFolderDialog(DataSet::LabelMaster3);
     });
     QObject::connect(
         &w, &ui::MainWindow::sigImportFolderRequested, &files, &FileService::importFrom);

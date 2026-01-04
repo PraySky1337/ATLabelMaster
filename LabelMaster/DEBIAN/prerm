@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+if [ -L /bin/labelmaster ] || [ -f /bin/labelmaster ]; then
+    rm -f /bin/labelmaster
+fi
+if [ -L /usr/bin/labelmaster ] || [ -f /usr/bin/labelmaster ]; then
+    rm -f /usr/bin/labelmaster
+fi
+update-desktop-database || true
+exit 0
+

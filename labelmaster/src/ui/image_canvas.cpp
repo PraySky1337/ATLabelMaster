@@ -1,5 +1,6 @@
 #include "image_canvas.hpp"
 #include "../util/bridge.hpp"
+#include "../util/id_convert.hpp"
 #include "controller/settings.hpp"
 #include "info_dialog.h"
 #include "mainwindow.hpp"
@@ -30,6 +31,7 @@
 #include <qdebug.h>
 #include <qeventloop.h>
 #include <qglobal.h>
+#include <qhash.h>
 #include <qimage.h>
 #include <qinputdialog.h>
 #include <qlist.h>
@@ -252,9 +254,10 @@ bool ImageCanvas::setSelectedClass(const QString& cls) {
     update();
     return true;
 }
-bool ImageCanvas::setSelectedInfo(const QString& cls, const QString& color) {
+bool ImageCanvas::setSelectedInfo(const QString& cls, const QString& color, const int& size) {
     if (selectedIndex_ < 0 || selectedIndex_ >= dets_.size())
         return false;
+    dets_[selectedIndex_].size  = size;
     dets_[selectedIndex_].color = color.isEmpty() ? "Gray" : color;
     dets_[selectedIndex_].cls   = cls.isEmpty() ? QStringLiteral("unknown") : cls;
     emit detectionUpdated(selectedIndex_, dets_[selectedIndex_]);
@@ -589,7 +592,7 @@ void ImageCanvas::createNewDetection() { // 画框
     a.p3          = QPointF(r.right(), r.top());
     a.cls         = currentClass_.isEmpty() ? QStringLiteral("unknown") : currentClass_;
     a.color       = currentColor_.isEmpty() ? QStringLiteral("G") : currentColor_;
-    currentClass_ = "";
+    a.size        = currentSize_;
     currentColor_ = "";
     dets_.append(a);
     emit annotationCommitted(a);
@@ -939,7 +942,9 @@ void ImageCanvas::promptEditSelectedInfo(bool isCurrent) {
     if (isCurrent) {
         dialog->updateInfo(true);
     } else {
-        dialog->updateInfo(false, dets_[selectedIndex_].cls, dets_[selectedIndex_].color);
+        dialog->updateInfo(
+            false, IdConvert::classToken2Id(dets_[selectedIndex_].cls),
+            IdConvert::colorLetter2Id(dets_[selectedIndex_].color), dets_[selectedIndex_].size);
     }
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
@@ -947,15 +952,18 @@ void ImageCanvas::promptEditSelectedInfo(bool isCurrent) {
 
 void ImageCanvas::setupSvg() {
     auto icons_dir  = controller::AppSettings::instance().assetsDir() + "/icons";
-    svgCache_["1"]  = new QSvgRenderer(icons_dir + "/1.svg", this);
-    svgCache_["2"]  = new QSvgRenderer(icons_dir + "/2.svg", this);
-    svgCache_["3"]  = new QSvgRenderer(icons_dir + "/3.svg", this);
-    svgCache_["4"]  = new QSvgRenderer(icons_dir + "/4.svg", this);
-    svgCache_["5"]  = new QSvgRenderer(icons_dir + "/5.svg", this);
-    svgCache_["Bb"] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
-    svgCache_["Bs"] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
-    svgCache_["G"]  = new QSvgRenderer(icons_dir + "/G.svg", this);
-    svgCache_["O"]  = new QSvgRenderer(icons_dir + "/O.svg", this);
+    svgCache_[0][0] = new QSvgRenderer(icons_dir + "/G.svg", this);
+    svgCache_[1][1] = new QSvgRenderer(icons_dir + "/1.svg", this);
+    svgCache_[2][0] = new QSvgRenderer(icons_dir + "/2.svg", this);
+    svgCache_[3][0] = new QSvgRenderer(icons_dir + "/3.svg", this);
+    svgCache_[3][1] = new QSvgRenderer(icons_dir + "/B3.svg", this);
+    svgCache_[4][0] = new QSvgRenderer(icons_dir + "/4.svg", this);
+    svgCache_[4][1] = new QSvgRenderer(icons_dir + "/B4.svg", this);
+    // svgCache_[5][0] = new QSvgRenderer(icons_dir + "/5.svg", this);
+    // svgCache_[5][1] = new QSvgRenderer(icons_dir + "/B5.svg", this);
+    svgCache_[5][0] = new QSvgRenderer(icons_dir + "/O.svg", this);
+    svgCache_[6][0] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
+    svgCache_[6][1] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
     qInfo() << "SVG loaded.";
 }
 static bool isBigType(const QString& t) {
@@ -1010,16 +1018,23 @@ void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
 
     for (const auto& a : armors) {
         // —— 解析类别：取颜色 & 图案类型（用类型去找 svg）
-        QString color, type;
+        QString color;
+        int type, size;
         color = a.color;
-        type  = a.cls;
+        type  = IdConvert::classToken2Id(a.cls);
+        size  = a.size;
         // splitClass(a.cls, color, type);
 
         // 找到对应的 QSvgRenderer（建议你的 svgCache_ 用“类型名”做 key，比如
         // "1","2","Bb","Bs","S","O"...）
-        auto it = svgCache_.find(type);
-        if (it == svgCache_.end() || it.value() == nullptr) {
-            qWarning() << "SVG not found for type" << type;
+        auto hash = svgCache_.find(type);
+        if (hash == svgCache_.end()) {
+            qWarning() << "SVG not found for type" << a.cls;
+            continue;
+        }
+        auto it = hash->find(size);
+        if (it == hash->end() || it.value() == nullptr) {
+            qWarning() << "SVG not found for type and size" << a.cls << (a.size ? "Big" : "Small");
             continue;
         }
         QSvgRenderer* renderer = it.value();
@@ -1034,7 +1049,7 @@ void ImageCanvas::drawSvg(QPainter& p, const QVector<Armor>& armors) const {
             << imageToWidget(a.p3); // TR
 
         // 选择 big/small 的“源四点”（同样是 TL, BL, BR, TR；已在画布坐标）
-        const QPolygonF& src = isBigType(type) ? big_src_on_painter : small_src_on_painter;
+        const QPolygonF& src = a.size ? big_src_on_painter : small_src_on_painter;
         // —— 求单应 & 渲染
         QTransform H;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
@@ -1064,14 +1079,13 @@ void ImageCanvas::requestSave() {
     emit annotationsPublished(dets_, raw_img, !maskRects_.isEmpty());
 }
 void ImageCanvas::ProcessInfoChanged(
-    const QString& EditedClass, const QString& Color, bool isCurrent = false) {
+    const QString& EditedClass, const QString& Color, const int& size = 0, bool isCurrent = false) {
     if (isCurrent) {
         currentClass_ = EditedClass;
         currentColor_ = Color;
+        currentSize_  = size;
         createNewDetection();
-
     } else {
-        dets_[selectedIndex()].color = Color;
-        setSelectedClass(EditedClass.trimmed());
+        setSelectedInfo(EditedClass.trimmed(), Color, size);
     }
 }

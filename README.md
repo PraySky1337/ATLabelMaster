@@ -46,8 +46,8 @@ color label x1 y1 x2 y2 x3 y3 x4 y4
 | 2 | GRAY |
 | 3 | PURPLE |
 
-### Label
-| int | label |
+### Label V1.0
+| color | label |
 | :---: | :---: |
 | 0 |  G |
 | 1 |  1 |

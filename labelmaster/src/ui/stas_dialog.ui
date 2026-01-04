@@ -17,9 +17,9 @@
    <property name="geometry">
     <rect>
      <x>100</x>
-     <y>80</y>
+     <y>40</y>
      <width>211</width>
-     <height>111</height>
+     <height>151</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -71,12 +71,7 @@
         </item>
         <item>
          <property name="text">
-          <string>Bs</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Bb</string>
+          <string>B</string>
          </property>
         </item>
        </widget>
@@ -119,9 +114,34 @@
           <string>Purple</string>
          </property>
         </item>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>Size:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QComboBox" name="sizeCombo">
         <item>
          <property name="text">
-          <string/>
+          <string>All</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Small</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Big</string>
          </property>
         </item>
        </widget>
@@ -133,9 +153,9 @@
   <widget class="QLabel" name="dataLabel">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>100</x>
      <y>200</y>
-     <width>131</width>
+     <width>211</width>
      <height>41</height>
     </rect>
    </property>
@@ -143,7 +163,7 @@
     <string>暂无统计数据</string>
    </property>
    <property name="alignment">
-    <set>Qt::AlignmentFlag::AlignCenter</set>
+    <set>Qt::AlignCenter</set>
    </property>
   </widget>
   <widget class="QWidget" name="horizontalLayoutWidget">
@@ -166,10 +186,10 @@
     <item>
      <widget class="QDialogButtonBox" name="buttonBox">
       <property name="orientation">
-       <enum>Qt::Orientation::Horizontal</enum>
+       <enum>Qt::Horizontal</enum>
       </property>
       <property name="standardButtons">
-       <set>QDialogButtonBox::StandardButton::Close</set>
+       <set>QDialogButtonBox::Close</set>
       </property>
      </widget>
     </item>

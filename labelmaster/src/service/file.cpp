@@ -2,6 +2,7 @@
 // File: service/file.cpp
 // ===============================
 #include "service/file.hpp"
+#include "../util/id_convert.hpp"
 #include "detector/ai/detector.hpp"
 #include "types.hpp"
 #include <QBuffer>
@@ -15,13 +16,13 @@
 #include <QQueue>
 #include <QSettings>
 #include <QSortFilterProxyModel>
-#include <chrono>
-#include <cstddef>
 #include <cstdio>
 #include <qabstractitemmodel.h>
 #include <qbuffer.h>
+#include <qcontiguouscache.h>
 #include <qdebug.h>
 #include <qdir.h>
+#include <qfiledialog.h>
 #include <qfileinfo.h>
 #include <qglobal.h>
 #include <qhashfunctions.h>
@@ -30,11 +31,15 @@
 #include <qlist.h>
 #include <qmath.h>
 #include <qnamespace.h>
+#include <qobject.h>
 #include <qpointer.h>
 #include <qsettings.h>
+#include <qsharedpointer.h>
 #include <qsortfilterproxymodel.h>
 #include <qstringalgorithms.h>
+#include <qtimer.h>
 #include <qtmetamacros.h>
+#include <strings.h>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 # include <QStringConverter> // Qt6: QTextStream::setEncoding
 #endif
@@ -47,7 +52,6 @@
 
 #include "../ui/stas_dialog.h"
 #include "../util/string.hpp"
-#include "controller/dataset.hpp"
 #include "controller/settings.hpp"
 #include "logger/core.hpp"
 
@@ -81,111 +85,6 @@ protected:
 };
 } // namespace
 
-// ---------- 工具：token 规范化 ----------
-QString FileService::colorLetter2Token(const QString& letter) {
-    const QString L = letter.trimmed().left(1).toUpper();
-    if (L == "B")
-        return "BLUE";
-    if (L == "R")
-        return "RED";
-    if (L == "G")
-        return "GRAY";
-    if (L == "P")
-        return "PURPLE";
-    const QString U = letter.trimmed().toUpper();
-    if (U == "BLUE" || U == "RED" || U == "GRAY" || U == "PURPLE")
-        return U;
-    return "GRAY";
-}
-QString FileService::colorToken2Letter(const QString& tk) {
-    const QString U = tk.trimmed().toUpper();
-    if (U == "BLUE")
-        return "B";
-    if (U == "RED")
-        return "R";
-    if (U == "GRAY")
-        return "G";
-    if (U == "PURPLE")
-        return "P";
-    if (U == "B" || U == "R" || U == "G" || U == "P")
-        return U;
-    return "G";
-}
-QString FileService::colorId2Letter(int id) {
-    switch (id) {
-    case 0: return "B"; // BLUE
-    case 1: return "R"; // RED
-    case 2: return "G"; // GRAY
-    case 3: return "P"; // PURPLE
-    default: return "G";
-    }
-}
-int FileService::colorToken2Id(const QString& token) {
-    const QString l = token.trimmed().toUpper();
-    if (l == "BLUE")
-        return 0;
-    if (l == "RED")
-        return 1;
-    if (l == "PURPLE")
-        return 3;
-    return 2;
-}
-// 颜色字母(B/R/G/P) → id(0/1/2/3)
-int FileService::colorLetter2Id(const QString& letter) {
-    const QChar c = letter.trimmed().isEmpty() ? QChar() : letter.trimmed().at(0).toUpper();
-    if (c == 'B')
-        return 0;                                               // BLUE
-    if (c == 'R')
-        return 1;                                               // RED
-    if (c == 'G')
-        return 2;                                               // GRAY
-    if (c == 'P')                                               // PURPLE
-        return 3;
-    return 2;                                                   // 默认 GRAY
-}
-int FileService::classToken2Id(const QString& NormalizedToken) {
-    if (NormalizedToken == "G") {
-        return 0;
-    }
-    if (NormalizedToken == "1" || NormalizedToken == "2" || NormalizedToken == "3"
-        || NormalizedToken == "4") {
-        return NormalizedToken.toInt();
-    }
-    if (NormalizedToken == "O")
-        return 5;
-    if (NormalizedToken == "Bs")
-        return 6;
-    if (NormalizedToken == "Bb")
-        return 7;
-    return 0;                                                   // 默认哨兵
-}
-QString FileService::classId2Token(const int& Id) {
-    switch (Id) {
-    case 0: return "G";
-    case 5: return "O";
-    case 6: return "Bs";
-    case 7: return "Bb";
-    default: return QString(QChar(Id + '0'));
-    }
-}
-QString FileService::normalizeClasslToken(const QString& cls) { // 归一化cls
-    const QString u = cls.trimmed().toUpper();
-    if (u == "G")
-        return "G";
-    if (u == "O")
-        return "O";
-    if (u == "BS")
-        return "Bs";
-    if (u == "BB")
-        return "Bb";
-    if (u == "1" || u == "2" || u == "3" || u == "4") {
-        return u;
-    }
-    // if (s == "Bs" || s == "Bb")
-    //     return s;
-    return u;
-}
-
 // ---------- 构造 / 析构 ----------
 FileService::FileService(QObject* parent)
     : QObject(parent)
@@ -199,7 +98,7 @@ FileService::FileService(QObject* parent)
     proxy_->setSourceModel(fsModel_);
     proxy_->setRecursiveFilteringEnabled(true);
     proxy_->setDynamicSortFilter(true);
-
+    // Don't use DirectoryLoaded , need sort
     connect(
         fsModel_, &QFileSystemModel::directoryLoaded, this, &FileService::selectFirst,
         Qt::UniqueConnection);
@@ -222,21 +121,31 @@ void FileService::exposeModel() { emit modelReady(proxy_); }
 
 void FileService::importFrom(const QAction* action) {
     DataSet dataset;
-    if (action->objectName() == "actionImport1") {
-        dataset = DataSet::SJTU;
+    if (action->objectName() == "actionLMV1") {
+        dataset = DataSet::LabelMaster;
+    } else if (action->objectName() == "actionLMV2") {
+        dataset = DataSet::LabelMaster2;
+    } else if (action->objectName() == "actionHITSZ") { // 南工骁鹰
+        dataset = DataSet::HITSZ;
+    } else if (action->objectName() == "actionUPC") {
+        dataset = DataSet::UPC;
+    } else if (action->objectName() == "actionNWPU") {
+        dataset = DataSet::NWPU;
     }
     openFolderDialog(dataset);
 }
 // ---------- 打开入口 ----------
 
 void FileService::openFolderDialog(const DataSet& type) {
-    const QString dir = QFileDialog::getExistingDirectory(nullptr, tr("选择图片文件夹"));
+    const QString dir = QFileDialog::getExistingDirectory(
+        nullptr, tr("选择图片文件夹"), QString(),
+        QFileDialog::Options(QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly));
     if (dir.isEmpty())
         return;
     currentDataSet = type; // 设置DataSet用于判断是否导入
     openDir(dir);
 }
-// 目录加载完成后如果需要导入，则进行导入，如果不需要再尝试选第一张
+// 目录加载完成后如果需要导入，则进行导入，如果不需要导入再尝试选第一张
 void FileService::selectFirst(const QString& path) {
     if (pendingDir_.isEmpty()) {
         emit busy(false);
@@ -244,9 +153,9 @@ void FileService::selectFirst(const QString& path) {
     }
     if (!(path == pendingDir_ || path.startsWith(pendingDir_ + '/'))) {
         return;
-    }
+    };
     if (tryImportDataSetAfterLoaded()) {
-        QTimer::singleShot(0, this, [this]() { tryOpenFirstAfterLoaded(pendingDir_); });
+        tryOpenFirstAfterLoaded(pendingDir_);
     }
 }
 // BFS 找第一张图片（跨多层）
@@ -396,7 +305,13 @@ void FileService::deleteCurrent() {
 bool FileService::openDir(const QString& dir) {
     emit busy(true);
 
-    pendingDir_               = dir; // 不清空 pendingTargetPath_，以便恢复时指定目标文件
+    QString lastDir = fsModel_->rootPath();
+    pendingDir_     = dir; // 不清空 pendingTargetPath_，以便恢复时指定目标文件
+    if (lastDir == dir) {
+        LOGW(QString("目录已经打开：%1").arg(dir));
+        emit busy(false);
+        return false;
+    }
     const QModelIndex srcRoot = fsModel_->setRootPath(dir);                        // 异步开始
     if (!srcRoot.isValid()) {
         LOGW(QString("无效目录：%1").arg(dir));
@@ -436,8 +351,9 @@ bool FileService::setProxyRoot(const QString& dir) {
     return true;
 }
 bool FileService::tryImportDataSetAfterLoaded() {
-    if (currentDataSet != DataSet::LabelMaster) {                                  // 开始导入
+    if (currentDataSet != DataSet::LabelMaster3) {                                 // 开始导入
         auto fail = [&](const QString& tip, const QString& arg) {
+            emit busy(false);
             emit status(tip, 1200);
             LOGE(QString("%1:%2").arg(tip).arg(arg));
         };
@@ -448,49 +364,128 @@ bool FileService::tryImportDataSetAfterLoaded() {
                     fsModel_->index(i, 0, mapFromProxyToSource(target.parent()))); // 获取图片路径
                 const QString labelPath = labelFileForImage(imgPath);              // 计算Label路径
                 if (QFile::exists(labelPath)) {
+                    QBuffer buffer;
+                    buffer.open(QIODevice::ReadWrite);
+                    QTextStream convertStream(&buffer);
+                    QFile labelFile(labelPath);
+                    if (!labelFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                        fail("导入失败!无法打开Label", labelPath);
+                        return false;
+                    }
+                    QTextStream ts(&labelFile);
                     switch (currentDataSet) {
-                    case DataSet::SJTU: {
-                        QBuffer buffer;
-                        buffer.open(QIODevice::ReadWrite);
-                        QTextStream convertStream(&buffer);
-                        QFile labelFile(labelPath);
-                        if (!labelFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-                            fail("导入失败!无法打开Label", labelPath);
-                            return false;
-                        }
-                        QTextStream ts(&labelFile);
+
+                    case DataSet::LabelMaster: {                                   // v1 旧格式
+                        // | color | label |
+                        // | :---: | :---: |
+                        // | 0 |  | G |
+                        // | 1 |  | 1 |
+                        // | 2 |  | 2 |
+                        // | 3 |  | 3 |
+                        // | 4 |  | 4 |
+                        // | 5  | O(前哨站) |
+                        // | 6 | Bs(基地小装甲) |
+                        // | 7 | Bb(基地大装甲) |
                         while (!ts.atEnd()) {
                             QString raw = ts.readLine();
                             QStringList t;
                             if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
                                 continue;
                             }
-                            // 格式检查
-                            if (t.size() != 10) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(
+                                    t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
                             }
-
-                            bool ok         = true;
-                            int clsId       = t[t.size() - 2].toInt(&ok);
-                            const int colId = t[t.size() - 1].toInt(&ok);
-                            if (!(clsId >= 0 && clsId < 12) || !(0 <= colId && colId < 4)) {
-                                ok = false;
+                            t.pop_front();
+                            t.pop_front();
+                            switch (clsId) {
+                            case 6:
+                            case 7: clsId = 6; break;
                             }
-                            for (int i = 0; i < 8; i++) {
-                                if (std::fabs(t.at(i).toDouble(&ok)) > 1.5) {
-                                    fail("格式错误!请检查格式是否正确!", labelPath);
-                                    return false;
-                                }
+                            t.push_front(QString().number(clsId));
+                            t.push_front(QString().number(sizeId));
+                            t.push_front(QString().number(colorId));
+                            convertStream << t.join(" ") << "\n";
+                        }
+                        break;
+                    }
+                    case DataSet::LabelMaster2:
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
                             }
-                            if (!ok) {
-                                fail("格式错误!请检查格式是否正确", labelPath);
-                                return false;
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(
+                                    t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
                             }
-                            for (int i = 2; i > 0; i--) {
-
-                                t.move(t.size() - i, 0);
+                            t.pop_front();
+                            t.pop_front();
+                            t.pop_front();
+                            switch (clsId) {
+                            case 5: continue;
+                            case 6:
+                            case 7: clsId -= 1; break;
                             }
+                            t.push_front(QString().number(clsId));
+                            t.push_front(QString().number(sizeId));
+                            t.push_front(QString().number(colorId));
+                            convertStream << t.join(" ") << "\n";
+                        }
+                        break;
+                    case DataSet::UPC:
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(
+                                    t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            t.pop_front();
+                            t.pop_front();
+                            switch (clsId) {
+                            case 6:
+                            case 7: clsId--; break;
+                            case 8: clsId -= 2; break;
+                            case 9:
+                            case 10: clsId -= 6; break;
+                            case 5:
+                            case 11: continue;
+                            }
+                            t.push_front(QString().number(clsId));
+                            t.push_front(QString().number(sizeId));
+                            t.push_front(QString().number(colorId));
+                            convertStream << t.join(" ") << "\n";
+                        }
+                        break;
+                    case DataSet::HITSZ: { // 南工骁鹰
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(
+                                    t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            //[目标各点的x、y归一化坐标] <目标类id> <目标颜色id>
                             // 颜色字段:id
                             // 装甲板标注目标ID见下表
                             // 贴纸	ID
@@ -512,31 +507,66 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             // Red	1
                             // N（熄灭) 2
                             // Purple	3
-                            if (0 <= clsId && clsId < 5) {
-                                convertStream << t.join(" ") << "\n";
-                            } else if (clsId > 5 && clsId < 9) {
-                                clsId--;
-                                t[0] = QString(QChar('0' + clsId));
-                                convertStream << t.join(" ") << "\n";
-                            } else {
+                            switch (clsId) {
+                            case 6:
+                            case 7: clsId--; break;
+                            case 8: clsId -= 2; break;
+                            case 9:
+                            case 10: clsId -= 6; break;
+                            case 5:
+                            case 11: continue;
+                            }
+                            t.pop_back();
+                            t.pop_back();
+                            t.push_front(QString().number(clsId));
+                            t.push_front(QString().number(sizeId));
+                            t.push_front(QString().number(colorId));
+                            convertStream << t.join(" ") << "\n";
+                        }
+                        break;
+                    }
+                    case DataSet::NWPU: {
+                        while (!ts.atEnd()) {
+                            QString raw = ts.readLine();
+                            QStringList t;
+                            if (!StringProcess::processLabelString(raw, t)) {
+                                fail("格式错误!转换失败", labelPath);
                                 continue;
                             }
+                            int colorId, clsId, sizeId;
+                            if (!StringProcess::InitLabelInfo(
+                                    t, colorId, clsId, sizeId, currentDataSet)) {
+                                fail("格式错误!转换失败", labelPath);
+                                continue;
+                            }
+                            switch (clsId) {
+                            case 5: continue;
+                            case 6:
+                            case 7: clsId--; break;
+                            }
+                            t.pop_front();
+                            t.push_front(QString().number(clsId));
+                            t.push_front(QString().number(sizeId));
+                            t.push_front(QString().number(colorId));
+                            //<id> [目标各点的x、y归一化坐标]
+                            convertStream << t.join(" ") << "\n";
                         }
-                        convertStream.seek(0);
-                        QString Text = convertStream.readAll();
-                        buffer.close();
-                        labelFile.close();
-                        labelFile.open(QIODevice::WriteOnly);
-                        ts << Text;
-                        labelFile.close();
                         break;
                     }
                     default: break;
                     }
-                };
+                    convertStream.seek(0);
+                    QString Text = convertStream.readAll();
+                    buffer.close();
+                    labelFile.close();
+                    if (labelFile.open(QIODevice::WriteOnly)) {
+                        ts << Text;
+                        labelFile.close();
+                    }
+                }
             }
         } else {
-            fail("导入失败!目标目录无效!", fsModel_->filePath(target));
+            fail("导入失败!目标文件不存在!", fsModel_->filePath(target));
             return false;
         }
     }
@@ -709,19 +739,24 @@ bool FileService::writeLabelFile(
     ts.setCodec("UTF-8");
 #endif
     ts.setRealNumberNotation(QTextStream::FixedNotation);
-    ts.setRealNumberPrecision(6);                                       // 保留 6 位小数
+    ts.setRealNumberPrecision(6); // 保留 6 位小数
 
     const double W = double(imgSize.width());
     const double H = double(imgSize.height());
     auto norm      = [&](const QPointF& p) { return QPointF(p.x() / W, p.y() / H); };
 
     for (const auto& a : armors) {
-        const int colorId = colorLetter2Id(a.color);                    // 0/1/2/3
-        const int labelId = classToken2Id(normalizeClasslToken(a.cls)); // 字符串
+        const int colorId = IdConvert::colorLetter2Id(a.color);
+        const int classId = IdConvert::classToken2Id(
+            IdConvert::normalizeClasslToken(
+                a.cls));          // class size
+                                  // classToken2IdCollection(normalizeClasslToken(a.cls),
+                                  // idCollect); // 字符串
 
         const QPointF q0 = norm(a.p0), q1 = norm(a.p1), q2 = norm(a.p2), q3 = norm(a.p3);
-        ts << colorId << ' ' << labelId << ' ' << q0.x() << ' ' << q0.y() << ' ' << q1.x() << ' '
-           << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' ' << q3.y() << '\n';
+        ts << colorId << ' ' << a.size << ' ' << classId << ' ' << q0.x() << ' ' << q0.y() << ' '
+           << q1.x() << ' ' << q1.y() << ' ' << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' '
+           << q3.y() << '\n';
     }
     return true;
 }
@@ -750,9 +785,9 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         if (line.isEmpty())
             continue;
 
-        // color label x1 y1 x2 y2 x3 y3 x4 y4
+        // color size label x1 y1 x2 y2 x3 y3 x4 y4
         const QStringList t = line.simplified().split(' ');
-        if (t.size() != 10)
+        if (t.size() != 11)
             continue;
 
         bool ok  = true;
@@ -764,19 +799,20 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         };
 
         Armor a;
-        // 颜色字段：兼容“数字或字符串”
-        bool okInt = false;
-        int cid    = t.at(0).toInt(&okInt);
-        a.color    = okInt ? colorId2Letter(cid)         // 数字 → 字母
-                           : colorToken2Letter(t.at(0)); // 字符串 → 字母
-
-        okInt       = false;
-        int classId = t.at(0).toInt(&okInt);
-        a.cls   = okInt ? classId2Token(t.at(1).toInt()) : normalizeClasslToken(t.at(1)); // classId
-        a.score = 0.f;
-
-        double x0 = tod(2), y0 = tod(3), x1 = tod(4), y1 = tod(5), x2 = tod(6), y2 = tod(7),
-               x3 = tod(8), y3 = tod(9);
+        // 颜色字段：兼容“数字"
+        bool okInt  = false;
+        int colorId = t.at(0).toInt(&okInt);
+        int size    = t.at(1).toInt(&okInt);
+        int classId = t.at(2).toInt(&okInt);
+        if (!okInt) {
+            continue;
+        }
+        a.color   = IdConvert::colorId2Letter(colorId);
+        a.cls     = IdConvert::idCollect2Token(classId);
+        a.size    = size;
+        a.score   = 0.f;
+        double x0 = tod(3), y0 = tod(4), x1 = tod(5), y1 = tod(6), x2 = tod(7), y2 = tod(8),
+               x3 = tod(9), y3 = tod(10);
         if (!ok)
             continue;
 
@@ -851,44 +887,52 @@ void FileService::saveData(const QVector<Armor>& armors, const QImage& image, bo
     }
 }
 // 获取统计数据
-void FileService::getStas(int colorId, int classId) {
+void FileService::getStas(int colorId, int classId, int sizeId) {
     // 开始统计
-    int sum            = 0;
+    int targetCount    = 0;
+    int fileCount      = 0;
     QModelIndex parent = proxyCurrent_.parent();
     for (int i = 0; i < proxy_->rowCount(parent); i++) {
+        int hasTarget   = false;
         QString imgPath = fsModel_->filePath(fsModel_->index(i, 0, mapFromProxyToSource(parent)));
         const QString labelPath = labelFileForImage(imgPath);
         if (QFile::exists(labelPath)) {
             QFile file(labelPath);
-            file.open(QIODevice::ReadOnly | QIODevice::Text);
-            QTextStream ts(&file);
-            while (!ts.atEnd()) {
-                QStringList t;
-                if (!StringProcess::processLabelString(ts.readLine(), t)) {
-                    continue;
-                }
-                bool ok      = false;
-                int colId    = t.at(0).toInt(&ok);
-                colId        = ok ? colId : colorToken2Id(t.at(0));
-                int clsId    = t.at(1).toInt(&ok);
-                clsId        = ok ? clsId : classToken2Id(normalizeClasslToken(t.at(1)));
-                auto checkId = [&](const int& value, const int& target) {
-                    if (target == -1) {
-                        return true;
-                    } else {
-                        if (value == target) {
+            if (file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                QTextStream ts(&file);
+                while (!ts.atEnd()) {
+                    QStringList t;
+                    if (!StringProcess::processLabelString(ts.readLine(), t)) {
+                        continue;
+                    }
+                    bool ok   = false;
+                    int colId = t.at(0).toInt(&ok);
+                    int sId   = t.at(1).toInt(&ok);
+                    int clsId = t.at(2).toInt(&ok);
+                    if (!ok) {
+                        continue;
+                    }
+                    auto checkId = [&](const int& value, const int& target) {
+                        if (target == -1) {
                             return true;
+                        } else {
+                            if (value == target) {
+                                return true;
+                            }
                         }
+                        return false;
+                    };
+                    if (checkId(colId, colorId) && checkId(sId, sizeId)
+                        && checkId(clsId, classId)) {
+                        targetCount++;
+                        hasTarget = true;
                     }
-                    return false;
-                };
-                if (checkId(colId, colorId)) {
-                    if (checkId(clsId, classId)) {
-                        sum++;
-                    }
+                }
+                if (hasTarget) {
+                    fileCount++;
                 }
             }
         }
     }
-    emit StasGetted(sum);
+    emit StasGetted(targetCount, fileCount);
 }

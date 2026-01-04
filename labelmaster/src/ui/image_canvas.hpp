@@ -6,6 +6,7 @@
 #include <QRect>
 #include <QString>
 #include <QVector>
+#include <list>
 #include <opencv2/objdetect.hpp>
 #include <qglobal.h>
 #include <qimage.h>
@@ -58,12 +59,15 @@ public slots:
     // 类别与选中
     void setCurrentClass(const QString& cls) { currentClass_ = cls; } // 新框默认
     QString currentClass() const { return currentClass_; }
-    bool setSelectedInfo(const QString& cls, const QString& color);   // 改“选中框”的 cls 和 color
-    bool setSelectedClass(const QString& cls);                        // 改“选中框”的 cls
-    bool setSelectedIndex(int idx);                                   // -1 取消选中
+    bool setSelectedInfo(
+        const QString& cls, const QString& color,
+        const int& size);                      // 改“选中框”的 cls 和 color 和　size
+    bool setSelectedClass(const QString& cls); // 改“选中框”的 cls
+    bool setSelectedIndex(int idx);            // -1 取消选中
     int selectedIndex() const { return selectedIndex_; }
     // 更新颜色和类型
-    void ProcessInfoChanged(const QString& EditedClass, const QString& Color, bool isCurrent);
+    void ProcessInfoChanged(
+        const QString& EditedClass, const QString& Color, const int& size, bool isCurrent);
     void histEqualize();
 signals:
     // ROI
@@ -175,9 +179,10 @@ private:
     int dragHandle_  = -1;      // 正在拖动的角点（仅对 selected 生效）
     int hoverHandle_ = -1;      // 悬停角点（仅对 selected 生效）
 
+    int currentSize_ = 0;
     QString currentClass_;
     QString currentColor_;
-    QHash<QString, QSvgRenderer*> svgCache_;
+    QHash<int, QHash<int, QSvgRenderer*>> svgCache_;
 
     // 参数
     const double kMinScale_  = 0.2;

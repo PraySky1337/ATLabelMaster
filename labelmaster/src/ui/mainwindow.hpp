@@ -40,14 +40,14 @@ signals:
     void sigDeleteRequested();
     void sigSmartAnnotateRequested();
     void sigSettingsRequested();
-    void sigGetStasRequested(int colorId , int classId);
+    void sigGetStasRequested(int colorId, int classId, int sizeId);
     void sigFileActivated(const QModelIndex&);
     void sigDroppedPaths(const QStringList&);
     void sigKeyCommand(const QString&);
+    void sigStasUpdateRequested(const int& targetCount, const int& fileCount); // 统计信息输出
     // —— 类别相关输出 ——
-    void sigStasUpdateRequested(const int& count);
     void sigClassSelected(const QString& name); // 选中类别时发出
-    void sigStasGetted(const int& count);
+    void sigStasGetted(const int& targetCount, const int& fileCount);
 
     // FILE：通知 service 侧刷新索引（可选但推荐）
     void sigTreeModelReplaced(QAbstractItemModel* model);
