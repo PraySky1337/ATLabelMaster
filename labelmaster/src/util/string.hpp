@@ -73,6 +73,14 @@ inline bool InitLabelInfo(
         classCounts  = 8;
         corLabelSize = 11;
         break;
+    case DataSet::LabelMaster3:
+        colorId      = label[0].toInt(&ok);
+        sizeId       = label[1].toInt(&ok);
+        classId      = label[2].toInt(&ok);
+        posStart     = 3;
+        classCounts  = 7;
+        corLabelSize = 11;
+
     case DataSet::HITSZ:
         colorId = label[label.size() - 1].toInt(&ok);
         classId = label[label.size() - 2].toInt(&ok);
