@@ -7,6 +7,7 @@
 #include "ui/mainwindow.hpp"
 #include <QApplication>
 #include <QFile>
+#include <QDir>
 #include <pthread.h>
 #include <qapplication.h>
 #include <qcoreapplication.h>

@@ -23,7 +23,7 @@ file(GLOB_RECURSE SRC_FILES CONFIGURE_DEPENDS
 
 find_package(OpenCV REQUIRED)
 find_package(OpenVINO REQUIRED)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(Eigen3 REQUIRED NO_MODULE)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui Svg)
 
 add_executable(${PROJECT_NAME} ${SRC_FILES})
