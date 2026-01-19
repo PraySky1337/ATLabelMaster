@@ -11,5 +11,5 @@ then
 	rm ${targetPath}
 fi	
 mv ${binPath} ${targetPath}
-dpkg-deb --build LabelMaster labelmaster_1.2.1_amd64.deb
-mv labelmaster_1.2.1_amd64.deb ../dataset
+dpkg-deb --build LabelMaster labelmaster_1.2.2_amd64.deb
+mv labelmaster_1.2.2_amd64.deb ../dataset
