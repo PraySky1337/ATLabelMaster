@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <qabstractitemmodel.h>
 #include <qbuffer.h>
+#include <qcontiguouscache.h>
 #include <qdebug.h>
 #include <qdir.h>
 #include <qfiledialog.h>
