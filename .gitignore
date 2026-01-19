@@ -2,3 +2,4 @@ bin
 .cache
 build
 log
+LabelMaster/opt/labelmaster/labelmaster

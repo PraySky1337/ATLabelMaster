@@ -959,11 +959,11 @@ void ImageCanvas::setupSvg() {
     svgCache_[3][1] = new QSvgRenderer(icons_dir + "/B3.svg", this);
     svgCache_[4][0] = new QSvgRenderer(icons_dir + "/4.svg", this);
     svgCache_[4][1] = new QSvgRenderer(icons_dir + "/B4.svg", this);
-    // svgCache_[5][0] = new QSvgRenderer(icons_dir + "/5.svg", this);
-    // svgCache_[5][1] = new QSvgRenderer(icons_dir + "/B5.svg", this);
-    svgCache_[5][0] = new QSvgRenderer(icons_dir + "/O.svg", this);
-    svgCache_[6][0] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
-    svgCache_[6][1] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
+    svgCache_[5][0] = new QSvgRenderer(icons_dir + "/5.svg", this);
+    svgCache_[5][1] = new QSvgRenderer(icons_dir + "/B5.svg", this);
+    svgCache_[6][0] = new QSvgRenderer(icons_dir + "/O.svg", this);
+    svgCache_[7][0] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
+    svgCache_[7][1] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
     qInfo() << "SVG loaded.";
 }
 static bool isBigType(const QString& t) {

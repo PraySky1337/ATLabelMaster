@@ -1,8 +1,7 @@
 
 enum class DataSet : unsigned char { // 数据集格式
-    LabelMaster = 0,                 // V1.0
-    LabelMaster2,                    // V2.0
-    LabelMaster3,                    // V3.0 默认格式
+    LabelMaster = 0,
+    LabelMaster2,                    // 默认格式
     HITSZ,                           // 南工骁鹰
     //     贴纸 	ID
     // G（哨兵） 	0

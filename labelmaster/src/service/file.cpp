@@ -123,8 +123,6 @@ void FileService::importFrom(const QAction* action) {
     DataSet dataset;
     if (action->objectName() == "actionLMV1") {
         dataset = DataSet::LabelMaster;
-    } else if (action->objectName() == "actionLMV2") {
-        dataset = DataSet::LabelMaster2;
     } else if (action->objectName() == "actionHITSZ") { // 南工骁鹰
         dataset = DataSet::HITSZ;
     } else if (action->objectName() == "actionUPC") {
@@ -351,7 +349,7 @@ bool FileService::setProxyRoot(const QString& dir) {
     return true;
 }
 bool FileService::tryImportDataSetAfterLoaded() {
-    if (currentDataSet != DataSet::LabelMaster3) {                                 // 开始导入
+    if (currentDataSet != DataSet::LabelMaster2) {                                 // 开始导入
         auto fail = [&](const QString& tip, const QString& arg) {
             emit busy(false);
             emit status(tip, 1200);
@@ -402,8 +400,9 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             t.pop_front();
                             t.pop_front();
                             switch (clsId) {
+                            case 5: clsId = 6; break;
                             case 6:
-                            case 7: clsId = 6; break;
+                            case 7: clsId = 7; break;
                             }
                             t.push_front(QString().number(clsId));
                             t.push_front(QString().number(sizeId));
@@ -412,34 +411,6 @@ bool FileService::tryImportDataSetAfterLoaded() {
                         }
                         break;
                     }
-                    case DataSet::LabelMaster2:
-                        while (!ts.atEnd()) {
-                            QString raw = ts.readLine();
-                            QStringList t;
-                            if (!StringProcess::processLabelString(raw, t)) {
-                                fail("格式错误!转换失败", labelPath);
-                                continue;
-                            }
-                            int colorId, clsId, sizeId;
-                            if (!StringProcess::InitLabelInfo(
-                                    t, colorId, clsId, sizeId, currentDataSet)) {
-                                fail("格式错误!转换失败", labelPath);
-                                continue;
-                            }
-                            t.pop_front();
-                            t.pop_front();
-                            t.pop_front();
-                            switch (clsId) {
-                            case 5: continue;
-                            case 6:
-                            case 7: clsId -= 1; break;
-                            }
-                            t.push_front(QString().number(clsId));
-                            t.push_front(QString().number(sizeId));
-                            t.push_front(QString().number(colorId));
-                            convertStream << t.join(" ") << "\n";
-                        }
-                        break;
                     case DataSet::UPC:
                         while (!ts.atEnd()) {
                             QString raw = ts.readLine();
@@ -457,13 +428,10 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             t.pop_front();
                             t.pop_front();
                             switch (clsId) {
-                            case 6:
-                            case 7: clsId--; break;
-                            case 8: clsId -= 2; break;
+                            case 8: clsId--; break;
                             case 9:
-                            case 10: clsId -= 6; break;
-                            case 5:
-                            case 11: continue;
+                            case 10:
+                            case 11: clsId -= 6; break;
                             }
                             t.push_front(QString().number(clsId));
                             t.push_front(QString().number(sizeId));
@@ -508,13 +476,10 @@ bool FileService::tryImportDataSetAfterLoaded() {
                             // N（熄灭) 2
                             // Purple	3
                             switch (clsId) {
-                            case 6:
-                            case 7: clsId--; break;
-                            case 8: clsId -= 2; break;
+                            case 8: clsId--; break;
                             case 9:
-                            case 10: clsId -= 6; break;
-                            case 5:
-                            case 11: continue;
+                            case 10:
+                            case 11: clsId -= 6; break;
                             }
                             t.pop_back();
                             t.pop_back();
@@ -538,11 +503,6 @@ bool FileService::tryImportDataSetAfterLoaded() {
                                     t, colorId, clsId, sizeId, currentDataSet)) {
                                 fail("格式错误!转换失败", labelPath);
                                 continue;
-                            }
-                            switch (clsId) {
-                            case 5: continue;
-                            case 6:
-                            case 7: clsId--; break;
                             }
                             t.pop_front();
                             t.push_front(QString().number(clsId));
