@@ -22,7 +22,7 @@
   },
   {
     // 记得修改这里
-    "source": "/home/myb/Desktop/dataset", 
+    "source": "/home/sxs/Desktop/dataset", 
     "target": "/home/developer/dataset",
     "type": "bind"
   }
