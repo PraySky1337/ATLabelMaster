@@ -6,6 +6,7 @@
 #include <qdir.h>
 #include <qfile.h>
 #include <qfiledialog.h>
+#include <qfileinfo.h>
 #include <qglobal.h>
 #include <qnamespace.h>
 #include <qobject.h>
@@ -122,13 +123,21 @@ SettingsDialog::LabelInfo SettingsDialog::getLabelFromCombos(
     QComboBox* colorCombo, QComboBox* sizeCombo, QComboBox* classCombo) const {
     LabelInfo info;
 
-    // 颜色: Blue(0), Red(1), Gray(2), Purple(3)
+    // 颜色: All(-1), Blue(0), Red(1), Gray(2), Purple(3)
     QString colorText = colorCombo->currentText();
-    info.colorId = IdConvert::colorToken2Id(colorText);
+    if (colorText == "All") {
+        info.colorId = -1;  // -1 表示匹配所有颜色
+    } else {
+        info.colorId = IdConvert::colorToken2Id(colorText);
+    }
 
-    // 大小: Small(0), Big(1)
+    // 大小: All(-1), Small(0), Big(1)
     QString sizeText = sizeCombo->currentText();
-    info.size = (sizeText == "Small" || sizeText == "BIg") ? 0 : 1;
+    if (sizeText == "All") {
+        info.size = -1;  // -1 表示匹配所有大小
+    } else {
+        info.size = (sizeText == "Small" || sizeText == "BIg") ? 0 : 1;
+    }
 
     // 类别: G(0), 1-5(1-5), O(6), B(7)
     QString classText = classCombo->currentText();
@@ -151,9 +160,32 @@ void SettingsDialog::performBatchReplace() {
         return;
     }
 
+    // 处理相对路径 - 将相对路径转换为绝对路径
     QDir dir(labelDir);
+    if (!dir.isAbsolute()) {
+        // 如果是相对路径，尝试基于当前目录转换
+        QString currentDir = QDir::currentPath();
+        QString absPath = QDir::cleanPath(currentDir + "/" + labelDir);
+        dir = QDir(absPath);
+
+        // 如果目录仍然不存在，尝试基于上次图片目录
+        if (!dir.exists()) {
+            QString lastImgDir = controller::AppSettings::instance().lastImageDir();
+            if (!lastImgDir.isEmpty()) {
+                QFileInfo imgFi(lastImgDir);
+                if (imgFi.dir().exists()) {
+                    absPath = QDir::cleanPath(imgFi.absolutePath() + "/../" + labelDir);
+                    dir = QDir(absPath);
+                }
+            }
+        }
+    }
+
     if (!dir.exists()) {
-        ui_->batch_result_text->setPlainText("错误: 标签目录不存在: " + labelDir);
+        ui_->batch_result_text->setPlainText(
+            "错误: 标签目录不存在: " + labelDir + "\n"
+            "解析路径为: " + dir.absolutePath() + "\n"
+            "请检查设置中的保存目录是否正确。");
         return;
     }
 
@@ -223,12 +255,19 @@ void SettingsDialog::performBatchReplace() {
                 continue;
             }
 
-            // 检查是否匹配源标签
-            if (colorId == src.colorId && size == src.size && classId == src.classId) {
+            // 检查是否匹配源标签 (-1 表示通配符，匹配任意值)
+            bool colorMatch = (src.colorId == -1 || colorId == src.colorId);
+            bool sizeMatch = (src.size == -1 || size == src.size);
+            bool classMatch = (classId == src.classId);
+
+            if (colorMatch && sizeMatch && classMatch) {
                 // 替换为目标标签
+                int dstColorId = (dst.colorId == -1) ? colorId : dst.colorId;
+                int dstSize = (dst.size == -1) ? size : dst.size;
+
                 line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11")
-                    .arg(dst.colorId)
-                    .arg(dst.size)
+                    .arg(dstColorId)
+                    .arg(dstSize)
                     .arg(dst.classId)
                     .arg(parts[3])
                     .arg(parts[4])
@@ -278,7 +317,7 @@ void SettingsDialog::performBatchReplace() {
         .arg(ui_->dst_class_combo->currentText());
 
     QString report = QString("=== 批量替换统计 ===\n\n")
-        + QString("标签目录: %1\n\n").arg(labelDir)
+        + QString("标签目录: %1\n\n").arg(dir.absolutePath())
         + QString("替换规则:\n")
         + QString("  源: %1\n").arg(srcDesc)
         + QString("  目标: %1\n\n").arg(dstDesc)

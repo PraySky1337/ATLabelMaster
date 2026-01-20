@@ -252,6 +252,11 @@
        <widget class="QComboBox" name="src_color_combo">
         <item>
          <property name="text">
+          <string>All</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
           <string>Blue</string>
          </property>
         </item>
@@ -281,6 +286,11 @@
       </item>
       <item row="1" column="3">
        <widget class="QComboBox" name="src_size_combo">
+        <item>
+         <property name="text">
+          <string>All</string>
+         </property>
+        </item>
         <item>
          <property name="text">
           <string>Small</string>
