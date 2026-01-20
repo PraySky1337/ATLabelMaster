@@ -1,6 +1,6 @@
 #include "qstring.h"
 namespace IdConvert {
-    // ---------- 工具：token 规范化 ----------
+// ---------- 工具：token 规范化 ----------
 inline QString colorLetter2Token(const QString& letter) {
     const QString L = letter.trimmed().left(1).toUpper();
     if (L == "B")
@@ -107,6 +107,7 @@ inline int classToken2Id(const QString& NormalizedToken) {
     //     }
     //     break;
     // }
+    // V3 - 修复支持数字 5
     if (NormalizedToken.length() == 1) {
         switch (ch) {
         case 'G': return 0;
@@ -119,9 +120,24 @@ inline int classToken2Id(const QString& NormalizedToken) {
         case 'B': return 7;
         }
     }
-    return 0; // 默认哨兵
+    return 0; // 默认返回 0 (G)
+    // V2
+    //  if (NormalizedToken.length() == 1) {
+    //      switch (ch) {
+    //      case 'G': return 0;
+    //      case '1':
+    //      case '2':
+    //      case '3':
+    //      case '4':
+    //      case '5': return (ch - '0');
+    //      case 'O': return 6;
+    //      case 'B': return 7;
+    //      }
+    //  }
+    //  return 0; // 默认哨兵
 }
 inline QString idCollect2Token(const int& classId) {
+    // V3 - 修复支持数字 5
     switch (classId) {
     case 0: return "G";
     case 1:
@@ -201,4 +217,4 @@ inline QString normalizeClasslToken(const QString& cls) { // 归一化cls
     return u;
 }
 
-}
+} // namespace IdConvert

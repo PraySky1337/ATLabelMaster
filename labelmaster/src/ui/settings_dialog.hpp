@@ -1,5 +1,6 @@
 
 #include "ui_settings_dialog.h"
+#include <qcombobox.h>
 #include <qdialog.h>
 #include <qfiledialog.h>
 #include <qobject.h>
@@ -14,6 +15,14 @@ public:
 
 private:
     Ui::SettingsDialog* ui_;
+    struct LabelInfo {
+        int colorId;
+        int size;
+        int classId;
+    };
+    LabelInfo getLabelFromCombos(
+        QComboBox* colorCombo, QComboBox* sizeCombo,
+        QComboBox* classCombo) const;
 private slots:
     void accept() { this->done(1); }
     void reject() { this->done(1); }
@@ -30,6 +39,7 @@ public slots:
     void setFixedRoi(bool isFixedRoi);         // 设置固定ROI(decrepated)
     void setRoiH();                            // 设置ROI高度(decrepated)
     void setRoiW();                            // 设置ROI宽度(decrepated)
+    void performBatchReplace();                // 批量替换标签
     // void resotre();                            // 恢复默认值
 };
 
