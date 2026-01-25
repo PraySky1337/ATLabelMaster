@@ -1,0 +1,17 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ATLabelMaster
+Name[zh_CN]=装甲板标注工具
+GenericName=RoboMaster Armor Annotation Tool
+GenericName[zh_CN]=RoboMaster 装甲板标注工具
+Comment=Pixel-art style annotation tool for RoboMaster armor plates
+Comment[zh_CN]=像素风格的 RoboMaster 装甲板标注工具
+Exec=labelmaster %F
+Icon=labelmaster
+Terminal=false
+Categories=Graphics;Photography;Qt;
+Keywords=annotation;label;RoboMaster;armor;computer vision;
+MimeType=image/png;image/jpeg;image/bmp;
+StartupNotify=true
+StartupWMClass=LabelMaster

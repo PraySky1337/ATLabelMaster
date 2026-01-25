@@ -298,6 +298,7 @@
      <addaction name="actionHITSZ"/>
      <addaction name="actionUPC"/>
      <addaction name="actionNMPU"/>
+     <addaction name="actionLMV3"/>
     </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
@@ -420,6 +421,14 @@
   <action name="actionNMPU">
    <property name="text">
     <string>NMPU数据集</string>
+   </property>
+  </action>
+  <action name="actionLMV3">
+   <property name="objectName">
+    <string>actionLMV3</string>
+   </property>
+   <property name="text">
+    <string>LabelMasterV3数据集 (15字段)</string>
    </property>
   </action>
  </widget>

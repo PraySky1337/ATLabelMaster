@@ -1,0 +1,112 @@
+# 同步配置文件
+# 用于 SSH 免密登录配置和 Unison 双向同步
+
+# ═══════════════════════════════════════════════════════════
+# SSH 连接配置
+# ═══════════════════════════════════════════════════════════
+[ssh]
+# 远程主机地址
+host = "192.168.50.226"
+# SSH 用户
+user = "rry"
+# SSH 端口 (默认: 22)
+port = 22
+# 连接超时 (秒)
+timeout = 3
+
+# SSH 密钥配置
+[ssh.key]
+# 密钥类型: rsa, ed25519, ecdsa
+type = "rsa"
+# 密钥位数 (仅适用于 rsa)
+bits = 4096
+# 密钥文件路径 (空则使用默认 ~/.ssh/id_rsa)
+path = ""
+
+# ═══════════════════════════════════════════════════════════
+# Unison 同步配置
+# ═══════════════════════════════════════════════════════════
+[sync]
+# 本地目录
+local_dir = "/home/praysky/RMArmorDetect"
+# 远程目录
+remote_dir = "/home/rry/RMArmorDetect"
+
+# 同步选项
+[sync.options]
+# 重复同步模式 (持续监控并自动同步)
+repeat = true
+# 轮询时间间隔 (秒) - 当远程不支持实时监控时使用
+repeat_interval = 1
+# 静默模式 - 只在有变化时输出日志
+quiet = true
+# 测试模式 (只显示将要做的更改)
+test = false
+# 优先级: "local", "remote", ""
+prefer = ""
+# 自动创建远程目录
+auto_create_remote = true
+
+# 高级选项
+[sync.advanced]
+# 快速检测
+fastcheck = true
+# 保留时间戳
+times = true
+# 保留所有者
+owner = true
+# 保留组
+group = true
+# 权限模式 (0 = 忽略权限错误)
+perms = 0
+# 批处理模式 (无提示自动同步)
+batch = false
+# 冲突时复制而非合并
+copyonconflict = true
+
+# 日志配置
+[sync.log]
+# 启用日志
+enabled = true
+# 日志文件路径
+path = "~/.unison/sync.log"
+# 日志级别 (可选: "all", "changes", "errors")
+level = "all"
+
+# ═══════════════════════════════════════════════════════════
+# 忽略规则 (可选)
+# ═══════════════════════════════════════════════════════════
+# 格式: 忽略特定文件或目录
+# 示例:
+# [[sync.ignore]]
+# pattern = ".git/"
+#
+[[sync.ignore]]
+# pattern = "datasets/"
+#
+# [[sync.ignore]]
+# pattern = "node_modules/"
+#
+# [[sync.ignore]]
+# pattern = "*.tmp"
+
+# ═══════════════════════════════════════════════════════════
+# 多主机配置示例 (可选)
+# ═══════════════════════════════════════════════════════════
+# 可以配置多个同步目标
+#
+# [[hosts]]
+# name = "server1"
+# ssh_host = "192.168.1.100"
+# ssh_user = "root"
+# ssh_port = 22
+# local_dir = "/data/project"
+# remote_dir = "/data/backup/project"
+#
+# [[hosts]]
+# name = "server2"
+# ssh_host = "192.168.1.101"
+# ssh_user = "admin"
+# ssh_port = 2222
+# local_dir = "/data/project"
+# remote_dir = "/home/admin/project"

@@ -1,0 +1,52 @@
+{
+  "name": "Cyberpunk Dark",
+  "id": "dark",
+  "version": "2.0",
+  "description": "Cyberpunk-inspired dark theme with vibrant accent colors",
+  "colors": {
+    "background": "#0d1117",
+    "panel": "#161b22",
+    "panel_alternate": "#0d1117",
+    "text": "#c9d1d9",
+    "text_dim": "#8b949e",
+    "text_bright": "#ffffff",
+    "border": "#30363d",
+    "border_light": "#8b949e",
+    "border_dark": "#010409",
+    "accent_primary": "#58a6ff",
+    "accent_secondary": "#bc8cff",
+    "accent_success": "#3fb950",
+    "accent_warning": "#d29922",
+    "accent_error": "#f85149",
+    "accent_info": "#79c0ff",
+    "button_hover": "#79c0ff",
+    "button_pressed": "#1f6feb",
+    "button_disabled": "#30363d",
+    "input_background": "#0d1117",
+    "input_text": "#c9d1d9",
+    "input_border": "#30363d",
+    "input_focus": "#58a6ff",
+    "selection": "#58a6ff",
+    "selection_text": "#0d1117",
+    "link": "#58a6ff",
+    "link_visited": "#bc8cff"
+  },
+  "fonts": {
+    "ui": "Segoe UI, Arial, sans-serif",
+    "mono": "JetBrains Mono, Consolas, monospace"
+  },
+  "dimensions": {
+    "button_border": 1,
+    "panel_border": 1,
+    "corner_radius": 2,
+    "spacing_small": 4,
+    "spacing_medium": 8,
+    "spacing_large": 16,
+    "icon_size": 16
+  },
+  "effects": {
+    "pixel_scaling": false,
+    "scanlines": false,
+    "animation_speed": "fast"
+  }
+}

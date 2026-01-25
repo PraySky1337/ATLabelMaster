@@ -65,155 +65,48 @@ inline int colorLetter2Id(const QString& letter) {
 inline int classToken2Id(const QString& NormalizedToken) {
     int len = NormalizedToken.length();
     char ch = NormalizedToken.at(0).toLatin1();
-    // switch (ch) {
-    // case 'G':
-    //     if (len == 2) {
-    //         res[0] = 0;
-    //         switch (NormalizedToken.at(1).toLatin1()) {
-    //         case 's': res[1] = 0; break;
-    //         case 'b': res[1] = 1; break;
-    //         }
-    //     }
-    //     break;
-    // case '1':
-    // case '2':
-    //     if (len == 1) {
-    //         res[0] = ch - '0';
-    //     }
-    //     break;
-    // case '3':
-    // case '4':
-    // case '5':
-    //     if (len == 2 && NormalizedToken.at(0).toLatin1() == 'B') {
-    //         res[0] = ch - '0';
-    //         res[1] = 1;
-    //     } else if (len == 1) {
-    //         res[0] = ch - '0';
-    //         res[1] = 0;
-    //     }
-    //     break;
-    // case 'O':
-    //     if (len == 1) {
-    //         res[0] = 6;
-    //     }
-    //     break;
-    // case 'B':
-    //     if (len == 2) {
-    //         res[0] = 7;
-    //         switch (NormalizedToken.at(1).toLatin1()) {
-    //         case 's': res[1] = 0; break;
-    //         case 'b': res[1] = 1; break;
-    //         }
-    //     }
-    //     break;
-    // }
-    // V3 - 修复支持数字 5
-    if (NormalizedToken.length() == 1) {
+    // G 和 B 通过 size 区分大小
+    if (len == 1) {
         switch (ch) {
-        case 'G': return 0;
+        case 'G': return 0;  // G 哨兵（通过 size 区分大小）
         case '1':
         case '2':
         case '3':
         case '4':
         case '5': return (ch - '0');
         case 'O': return 6;
-        case 'B': return 7;
+        case 'B': return 7;  // B 基地（通过 size 区分大小）
         }
     }
     return 0; // 默认返回 0 (G)
-    // V2
-    //  if (NormalizedToken.length() == 1) {
-    //      switch (ch) {
-    //      case 'G': return 0;
-    //      case '1':
-    //      case '2':
-    //      case '3':
-    //      case '4':
-    //      case '5': return (ch - '0');
-    //      case 'O': return 6;
-    //      case 'B': return 7;
-    //      }
-    //  }
-    //  return 0; // 默认哨兵
 }
 inline QString idCollect2Token(const int& classId) {
-    // V3 - 修复支持数字 5
     switch (classId) {
-    case 0: return "G";
+    case 0: return "G";   // 哨兵（通过 size 区分大小）
     case 1:
     case 2:
     case 3:
     case 4:
     case 5: return QString(QChar(classId + '0'));
     case 6: return "O";
-    case 7: return "B";
+    case 7: return "B";   // 基地（通过 size 区分大小）
     }
     return QString(QChar(classId + '0'));
-    // switch (classId) {
-    // case 0:
-    //     switch (sizeId) {
-    //     case 0: return "Gs";
-    //     default: return "Gb";
-    //     }
-    // case 1:
-    // case 2: return QString(QChar(classId + '0'));
-    // case 6: {
-    //     return "O";
-    // };
-    // case 7: {
-    //     switch (sizeId) {
-    //     case 0: return "Bs";
-    //     default: return "Bb";
-    //     }
-    // };
-    // default:
-    //     switch (sizeId) {
-    //     case 0: return QString(QChar(classId + '0'));
-    //     default: return QString(QChar(classId + '0')) + "B";
-    //     };
-    // }
 }
 inline QString normalizeClasslToken(const QString& cls) { // 归一化cls
     const QString u = cls.trimmed().toUpper();
     if (u == "G") {
-        return "G";
+        return "G";   // G 哨兵（通过 size 区分大小）
     }
     if (u == "O") {
         return "O";
     }
-    if (u == "B") {
-        return "B";
+    if (u == "B" || u == "BS" || u == "BB") {
+        return "B";   // B, Bs, Bb → B (基地，通过 size 区分大小)
     }
-    // if (u == "O")
-    //     return "O";
-    // if (u == "BS")
-    //     return "Bs";
-    // if (u == "BB")
-    //     return "Bb";
-    // if (u == "GS")
-    //     return "Gs";
-    // if (u == "GB")
-    //     return "Gb";
-    // if (u == "O")
-    //     return "O";
-    // if (u == "BS")
-    //     return "Bs";
-    // if (u == "BB")
-    //     return "Bb";
     if (u == "1" || u == "2" || u == "3" || u == "4" || u == "5") {
         return u;
     }
-    // if (u.at(1) == 'B') {
-    //     bool ok = true;
-    //     switch (u.at(0).toLatin1() - 48) {
-    //     case 3: return "3B"; break;
-    //     case 4: return "4B"; break;
-    //     case 5: return "5B"; break;
-    //     default: break;
-    //     }
-    // }
-    // // if (s == "Bs" || s == "Bb")
-    // //     return s;
     return u;
 }
 

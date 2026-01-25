@@ -73,6 +73,17 @@ inline bool InitLabelInfo(
         classCounts  = 8;
         corLabelSize = 11;
         break;
+    case DataSet::LabelMaster3:
+        // 新格式: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3 (15字段)
+        colorId      = label[0].toInt(&ok);
+        sizeId       = label[1].toInt(&ok);
+        classId      = label[2].toInt(&ok);
+        // 字段 3-6: x, y, w, h (边界矩形)
+        // 字段 7-14: x0, y0, x1, y1, x2, y2, x3, y3 (角点)
+        posStart     = 7;
+        classCounts  = 8;
+        corLabelSize = 15;  // 15字段
+        break;
     case DataSet::HITSZ:
         colorId = label[label.size() - 1].toInt(&ok);
         classId = label[label.size() - 2].toInt(&ok);

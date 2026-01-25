@@ -1,0 +1,45 @@
+# Maintainer: Your Name <your.email@example.com>
+# Contributor: ATLabelMaster Contributors
+
+pkgname=labelmaster
+pkgver=1.2.2
+pkgrel=1
+pkgdesc="RoboMaster 装甲板标注工具 (Pixel Art Style Edition)"
+arch=('x86_64' 'aarch64')
+url="https://github.com/mybna134/ATLabelMaster"
+license=('MIT')
+depends=('qt6-base' 'qt6-svg' 'opencv' 'openvino' 'eigen')
+makedepends=('cmake' 'qt6-tools' 'git')
+conflicts=()
+provides=()
+source=("$pkgname-$pkgver::git+https://github.com/mybna134/ATLabelMaster.git#tag=v$pkgver")
+md5sums=('SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  mkdir -p build
+  cd build
+  cmake -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        ..
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver/build"
+  make DESTDIR="$pkgdir" install
+
+  # Install desktop file
+  install -Dm644 "$srcdir/$pkgname-$pkgver/packaging/common/labelmaster.desktop" \
+    "$pkgdir/usr/share/applications/labelmaster.desktop"
+
+  # Install icon
+  install -Dm644 "$srcdir/$pkgname-$pkgver/assets/icons/1.svg" \
+    "$pkgdir/usr/share/icons/hicolor/scalable/apps/labelmaster.svg"
+
+  # Install license if available
+  if [ -f "$srcdir/$pkgname-$pkgver/LICENSE" ]; then
+    install -Dm644 "$srcdir/$pkgname-$pkgver/LICENSE" \
+      "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  fi
+}

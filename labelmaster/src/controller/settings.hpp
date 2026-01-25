@@ -67,6 +67,8 @@ public:
         numberClassifierThreshold, Keys::kNumberClassifierThreshold,
         Def::kNumberClassifierThreshold)
     APP_SETTING_RW_FLOAT(vRate, Keys::kvRate, Def::kVRate)
+    APP_SETTING_RW_STR(theme, Keys::kTheme, Def::kTheme)
+    APP_SETTING_RW_INT(outputFormat, Keys::kOutputFormat, Def::kOutputFormat)
 
 #undef APP_SETTING_RW_STR
 #undef APP_SETTING_RW_INT
@@ -93,6 +95,8 @@ private:
         static constexpr const char* kRoiH                      = "roi/h";
         static constexpr const char* kAssetsDir                 = "assets/directory";
         static constexpr const char* kNumberClassifierThreshold = "detector/tradition/threshold";
+        static constexpr const char* kTheme                     = "ui/theme";
+        static constexpr const char* kOutputFormat              = "dataset/outputFormat";
     };
     struct Def {
         static constexpr const char* kSaveDir             = "label";
@@ -104,6 +108,8 @@ private:
         static constexpr int kRoiH                        = 480;
         static constexpr float kNumberClassifierThreshold = 80.f;
         static constexpr const float kVRate               = 4;
+        static constexpr const char* kTheme               = "retro";
+        static constexpr const int kOutputFormat          = 0;  // 0=pts-only(11), 1=xywh+pts(15)
     };
 
     QSettings settings_;

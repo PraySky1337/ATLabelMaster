@@ -1,0 +1,108 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    container: ubuntu:22.04
+
+    steps:
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y \
+          cmake \
+          g++ \
+          qt6-base-dev \
+          qt6-base-dev-tools \
+          libqt6svg6-dev \
+          libopencv-dev \
+          libeigen3-dev \
+          git \
+          wget
+
+    - name: Install OpenVINO
+      run: |
+        wget https://apt.repos.intel.com/openvino/2024/GPG-PUB-KEY-INTEL-OPENVINO-2024
+        mv GPG-PUB-KEY-INTEL-OPENVINO-2024 /etc/apt/trusted.gpg.d/
+        echo "deb https://apt.repos.intel.com/openvino/2024 ubuntu22 main" > /etc/apt/sources.list.d/intel-openvino-2024.list
+        apt-get update
+        apt-get install -y openvino-dev-2024.1.0
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_CXX_STANDARD=20
+
+    - name: Build
+      run: |
+        cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} -j$(nproc)
+
+    - name: Test binary
+      run: |
+        ls -lh ${{github.workspace}}/build/bin/
+
+  build-arch:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        pacman -Sy --noconfirm --needed base-devel cmake git qt6-base qt6-svg opencv openvino eigen
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: |
+        cmake --build build -j$(nproc)
+
+  build-fedora:
+    runs-on: ubuntu-latest
+    container: fedora:40
+
+    steps:
+    - name: Install dependencies
+      run: |
+        dnf install -y cmake gcc-c++ qt6-qtbase-devel qt6-qtsvg-devel \
+          opencv-devel openvino-devel eigen3-devel git
+
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: |
+        cmake --build build -j$(nproc)
+
+  format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install clang-format
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-format
+
+    - name: Check format
+      run: |
+        find labelmaster/src -name "*.cpp" -o -name "*.hpp" | xargs clang-format --dry-run --Werror

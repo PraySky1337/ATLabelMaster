@@ -5,6 +5,7 @@
 #include "ui/image_canvas.hpp"
 #include "ui/info_dialog.h"
 #include "ui/mainwindow.hpp"
+#include "ui/pixel_widgets/theme_manager.hpp"
 #include <QApplication>
 #include <QFile>
 #include <QDir>
@@ -30,6 +31,13 @@ int main(int argc, char* argv[]) {
         QCoreApplication::applicationDirPath() + "/assets");
 #endif
     logger::Logger::installQtHandler();
+
+    // Initialize pixel theme system
+    using labelmaster::ui::ThemeManager;
+    QString savedTheme = controller::AppSettings::instance().theme();
+    ThemeManager::instance().loadTheme(savedTheme);
+    ThemeManager::instance().applyTheme();
+
     ui::MainWindow w;
     FileService files;
     rm_auto_aim::Detector::LightParams lp;

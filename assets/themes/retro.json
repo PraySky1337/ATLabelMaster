@@ -1,0 +1,52 @@
+{
+  "name": "Tokyo Night Pixel",
+  "id": "retro",
+  "version": "2.0",
+  "description": "Pixel art theme inspired by Tokyo Night with enhanced colors",
+  "colors": {
+    "background": "#1a1b26",
+    "panel": "#24283b",
+    "panel_alternate": "#1f2335",
+    "text": "#c0caf5",
+    "text_dim": "#565f89",
+    "text_bright": "#ffffff",
+    "border": "#414868",
+    "border_light": "#565f89",
+    "border_dark": "#1a1b26",
+    "accent_primary": "#7aa2f7",
+    "accent_secondary": "#bb9af7",
+    "accent_success": "#9ece6a",
+    "accent_warning": "#e0af68",
+    "accent_error": "#f7768e",
+    "accent_info": "#7dcfff",
+    "button_hover": "#8aafef",
+    "button_pressed": "#6a8fd7",
+    "button_disabled": "#414868",
+    "input_background": "#1a1b26",
+    "input_text": "#c0caf5",
+    "input_border": "#414868",
+    "input_focus": "#7aa2f7",
+    "selection": "#7aa2f7",
+    "selection_text": "#1a1b26",
+    "link": "#7aa2f7",
+    "link_visited": "#bb9af7"
+  },
+  "fonts": {
+    "ui": "JetBrains Mono, Consolas, Monaco",
+    "mono": "JetBrains Mono, Consolas, monospace"
+  },
+  "dimensions": {
+    "button_border": 2,
+    "panel_border": 2,
+    "corner_radius": 0,
+    "spacing_small": 4,
+    "spacing_medium": 8,
+    "spacing_large": 16,
+    "icon_size": 16
+  },
+  "effects": {
+    "pixel_scaling": true,
+    "scanlines": false,
+    "animation_speed": "fast"
+  }
+}

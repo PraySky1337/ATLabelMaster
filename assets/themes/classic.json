@@ -1,0 +1,52 @@
+{
+  "name": "Classic Light",
+  "id": "classic",
+  "version": "2.0",
+  "description": "Clean light theme with modern pixel aesthetics",
+  "colors": {
+    "background": "#ffffff",
+    "panel": "#f8f9fa",
+    "panel_alternate": "#e9ecef",
+    "text": "#212529",
+    "text_dim": "#6c757d",
+    "text_bright": "#000000",
+    "border": "#dee2e6",
+    "border_light": "#adb5bd",
+    "border_dark": "#ced4da",
+    "accent_primary": "#0d6efd",
+    "accent_secondary": "#6f42c1",
+    "accent_success": "#198754",
+    "accent_warning": "#ffc107",
+    "accent_error": "#dc3545",
+    "accent_info": "#0dcaf0",
+    "button_hover": "#3d8bfd",
+    "button_pressed": "#0a58ca",
+    "button_disabled": "#e9ecef",
+    "input_background": "#ffffff",
+    "input_text": "#212529",
+    "input_border": "#ced4da",
+    "input_focus": "#0d6efd",
+    "selection": "#0d6efd",
+    "selection_text": "#ffffff",
+    "link": "#0d6efd",
+    "link_visited": "#6f42c1"
+  },
+  "fonts": {
+    "ui": "Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+    "mono": "JetBrains Mono, Consolas, monospace"
+  },
+  "dimensions": {
+    "button_border": 1,
+    "panel_border": 1,
+    "corner_radius": 2,
+    "spacing_small": 4,
+    "spacing_medium": 8,
+    "spacing_large": 16,
+    "icon_size": 16
+  },
+  "effects": {
+    "pixel_scaling": false,
+    "scanlines": false,
+    "animation_speed": "fast"
+  }
+}

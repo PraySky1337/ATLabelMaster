@@ -20,6 +20,7 @@
 #include <QWheelEvent>
 #include <QtMath>
 #include <algorithm>
+#include <limits>
 #include <array>
 #include <opencv2/core.hpp>
 #include <opencv2/core/mat.hpp>
@@ -348,6 +349,9 @@ void ImageCanvas::drawDetections(QPainter& p) const {
         return QColor(0, 200, 255);
     };
 
+    // 检查是否使用15字段格式 (Rect + Points)
+    bool showRectOverlay = controller::AppSettings::instance().outputFormat() == 1;
+
     for (int i = 0; i < dets_.size(); ++i) {
         const auto& d = dets_[i];
         QPolygonF poly;
@@ -357,6 +361,62 @@ void ImageCanvas::drawDetections(QPainter& p) const {
         const bool isSel   = (i == selectedIndex_);
         const bool isHover = (i == hoverIndex_);
         const QColor base  = colorOf(d.color);
+
+        // 绘制SVG边界矩形 (当使用15字段格式时，动态计算真实BBox)
+        if (showRectOverlay) {
+            // 计算SVG透视变换后的真实边界框
+            double svg_w, svg_h;
+            QPolygonF svg_anchors;
+            if (d.size == 0) {  // 小装甲
+                svg_w = 557.0; svg_h = 516.0;
+                svg_anchors << QPointF(0., 143.26) << QPointF(0., 372.74)
+                            << QPointF(557., 372.74) << QPointF(557., 143.26);
+            } else {  // 大装甲
+                svg_w = 871.0; svg_h = 478.0;
+                svg_anchors << QPointF(0., 140.61) << QPointF(0., 347.39)
+                            << QPointF(871., 347.39) << QPointF(871., 140.61);
+            }
+
+            // SVG外框四个角 (TL, BL, BR, TR)
+            QPolygonF svg_quad;
+            svg_quad << QPointF(0., 0.) << QPointF(0., svg_h)
+                     << QPointF(svg_w, svg_h) << QPointF(svg_w, 0.);
+
+            // 图像中的四个锚点
+            QPolygonF img_anchors;
+            img_anchors << d.p0 << d.p1 << d.p2 << d.p3;
+
+            // 计算单应性矩阵并变换SVG外框
+            QTransform transform;
+            if (QTransform::quadToQuad(svg_anchors, img_anchors, transform)) {
+                QPolygonF img_corners = transform.map(svg_quad);
+
+                // 计算边界框
+                double min_x = std::numeric_limits<double>::max();
+                double min_y = std::numeric_limits<double>::max();
+                double max_x = std::numeric_limits<double>::lowest();
+                double max_y = std::numeric_limits<double>::lowest();
+
+                for (const auto& pt : img_corners) {
+                    min_x = std::min(min_x, pt.x());
+                    min_y = std::min(min_y, pt.y());
+                    max_x = std::max(max_x, pt.x());
+                    max_y = std::max(max_y, pt.y());
+                }
+
+                // 转换为Widget坐标并绘制
+                QRectF rectImg(min_x, min_y, max_x - min_x, max_y - min_y);
+                QRectF rectW = QRectF(
+                    imageToWidget(rectImg.topLeft()),
+                    imageToWidget(rectImg.bottomRight())
+                ).normalized();
+
+                QPen rectPen(base.lighter(150), 1, Qt::DashLine);
+                p.setPen(rectPen);
+                p.setBrush(Qt::NoBrush);
+                p.drawRect(rectW);
+            }
+        }
 
         // 叠加填充（选中/悬停）
         if (isSel || isHover) {
@@ -375,9 +435,11 @@ void ImageCanvas::drawDetections(QPainter& p) const {
         p.setBrush(Qt::NoBrush);
         p.drawPolygon(poly);
 
-        // 文本（描边 + 主色）
+        // 文本（描边 + 主色）- 添加 [R+P] 标记表示使用矩形+角点格式
         const QPointF tl   = poly.boundingRect().topLeft();
-        const QString text = QString("%1%2").arg(d.color).arg(d.cls);
+        const QString text = showRectOverlay
+            ? QString("%1%2 [R+P]").arg(d.color).arg(d.cls)
+            : QString("%1%2").arg(d.color).arg(d.cls);
         QFont f            = p.font();
         f.setPointSizeF(f.pointSizeF() + 1);
         p.setFont(f);
@@ -952,22 +1014,32 @@ void ImageCanvas::promptEditSelectedInfo(bool isCurrent) {
 
 void ImageCanvas::setupSvg() {
     auto icons_dir  = controller::AppSettings::instance().assetsDir() + "/icons";
-    svgCache_[0][0] = new QSvgRenderer(icons_dir + "/G.svg", this);
-    svgCache_[1][1] = new QSvgRenderer(icons_dir + "/1.svg", this);
+    // G (哨兵) - class_id = 0, 通过 size 区分大小
+    svgCache_[0][0] = new QSvgRenderer(icons_dir + "/Gs.svg", this);  // 小装甲
+    svgCache_[0][1] = new QSvgRenderer(icons_dir + "/Gb.svg", this);  // 大装甲
+    // 1 (一号大装甲) - class_id = 1
+    svgCache_[1][0] = new QSvgRenderer(icons_dir + "/1.svg", this);
+    svgCache_[1][1] = svgCache_[1][0];
+    // 2 (二号) - class_id = 2
     svgCache_[2][0] = new QSvgRenderer(icons_dir + "/2.svg", this);
+    // 3 (三号) - class_id = 3
     svgCache_[3][0] = new QSvgRenderer(icons_dir + "/3.svg", this);
     svgCache_[3][1] = new QSvgRenderer(icons_dir + "/B3.svg", this);
+    // 4 (四号) - class_id = 4
     svgCache_[4][0] = new QSvgRenderer(icons_dir + "/4.svg", this);
     svgCache_[4][1] = new QSvgRenderer(icons_dir + "/B4.svg", this);
+    // 5 (五号) - class_id = 5
     svgCache_[5][0] = new QSvgRenderer(icons_dir + "/5.svg", this);
     svgCache_[5][1] = new QSvgRenderer(icons_dir + "/B5.svg", this);
+    // O (前哨站) - class_id = 6
     svgCache_[6][0] = new QSvgRenderer(icons_dir + "/O.svg", this);
+    // B (基地) - class_id = 7, 通过 size 区分大小
     svgCache_[7][0] = new QSvgRenderer(icons_dir + "/Bs.svg", this);
     svgCache_[7][1] = new QSvgRenderer(icons_dir + "/Bb.svg", this);
     qInfo() << "SVG loaded.";
 }
 static bool isBigType(const QString& t) {
-    // 示例规则：1 / Bb / B3 / B4 / B5 按“大装甲”；其余按“小装甲”
+    // 规则：1 / Bb / B3 / B4 / B5 按"大装甲"；其余按"小装甲"
     return (t == "1" || t == "Bb" || t == "B3" || t == "B4" || t == "B5");
 }
 

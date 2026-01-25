@@ -2,6 +2,7 @@
 #include "controller/settings.hpp"
 #include "ui_settings_dialog.h"
 #include "util/id_convert.hpp"
+#include "ui/pixel_widgets/theme_manager.hpp"
 #include <qcombobox.h>
 #include <qdir.h>
 #include <qfile.h>
@@ -9,6 +10,7 @@
 #include <qfileinfo.h>
 #include <qglobal.h>
 #include <qnamespace.h>
+#include <qmessagebox.h>
 #include <qobject.h>
 #include <qplaintextedit.h>
 #include <qvariant.h>
@@ -18,6 +20,8 @@
 #endif
 #include <QTextStream>
 using namespace ui;
+using labelmaster::ui::ThemeManager;
+
 SettingsDialog::SettingsDialog(QWidget* parent)
     : QDialog(parent)
     , ui_(new Ui::SettingsDialog) {
@@ -35,6 +39,22 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     this->ui_->fix_roi_checkbox->setChecked(controller::AppSettings::instance().fixedRoi());
     this->ui_->roi_h_spin->setValue(controller::AppSettings::instance().roiH());
     this->ui_->roi_w_spin->setValue(controller::AppSettings::instance().roiW());
+
+    // Initialize theme combo with available themes
+    QStringList themes = ThemeManager::instance().availableThemes();
+    ui_->theme_combo->clear();
+
+    // Add themes with display names
+    for (const QString& themeId : themes) {
+        QString displayName = ThemeManager::instance().themeDisplayName(themeId);
+        ui_->theme_combo->addItem(displayName, themeId);
+    }
+
+    // Set current theme
+    QString currentTheme = controller::AppSettings::instance().theme();
+    int themeIndex = ui_->theme_combo->findData(currentTheme);
+    if (themeIndex < 0) themeIndex = 0;
+    ui_->theme_combo->setCurrentIndex(themeIndex);
     update();
     connect(
         this->ui_->dataset_dir_edit, &QLineEdit::editingFinished, this,
@@ -53,6 +73,16 @@ SettingsDialog::SettingsDialog(QWidget* parent)
     connect(this->ui_->fix_roi_checkbox, &QCheckBox::toggled, this, &SettingsDialog::setFixedRoi);
     connect(this->ui_->roi_h_spin, &QSpinBox::editingFinished, this, &SettingsDialog::setRoiH);
     connect(this->ui_->roi_w_spin, &QSpinBox::editingFinished, this, &SettingsDialog::setRoiW);
+    connect(this->ui_->theme_combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::setTheme);
+
+    // 初始化格式选择（先设置值，再连接信号）
+    ui_->format_combo->setCurrentIndex(controller::AppSettings::instance().outputFormat());
+    connect(ui_->format_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, [this](int index) {
+        controller::AppSettings::instance().setoutputFormat(index);
+    });
+    connect(ui_->batch_convert_button, &QPushButton::clicked,
+            this, &SettingsDialog::performBatchConvert);
 }
 void SettingsDialog::SaveDirEditUpdate() {
     const QString dir = QFileDialog::getExistingDirectory(
@@ -238,9 +268,11 @@ void SettingsDialog::performBatchReplace() {
                 continue;
             }
 
-            // Parse: color size class x0 y0 x1 y1 x2 y2 x3 y3
+            // Parse: 支持11字段和15字段格式
+            // 11字段: color size class x0 y0 x1 y1 x2 y2 x3 y3
+            // 15字段: color size class x y w h x0 y0 x1 y1 x2 y2 x3 y3
             QStringList parts = trimmed.simplified().split(' ');
-            if (parts.size() != 11) {
+            if (parts.size() != 11 && parts.size() != 15) {
                 newLines.append(line);
                 continue;
             }
@@ -265,18 +297,25 @@ void SettingsDialog::performBatchReplace() {
                 int dstColorId = (dst.colorId == -1) ? colorId : dst.colorId;
                 int dstSize = (dst.size == -1) ? size : dst.size;
 
-                line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11")
-                    .arg(dstColorId)
-                    .arg(dstSize)
-                    .arg(dst.classId)
-                    .arg(parts[3])
-                    .arg(parts[4])
-                    .arg(parts[5])
-                    .arg(parts[6])
-                    .arg(parts[7])
-                    .arg(parts[8])
-                    .arg(parts[9])
-                    .arg(parts[10]);
+                // 根据原始格式输出
+                if (parts.size() == 11) {
+                    // 11字段格式: color size class x0 y0 x1 y1 x2 y2 x3 y3
+                    line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11")
+                        .arg(dstColorId)
+                        .arg(dstSize)
+                        .arg(dst.classId)
+                        .arg(parts[3]).arg(parts[4]).arg(parts[5]).arg(parts[6])
+                        .arg(parts[7]).arg(parts[8]).arg(parts[9]).arg(parts[10]);
+                } else {
+                    // 15字段格式: color size class x y w h x0 y0 x1 y1 x2 y2 x3 y3
+                    line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11 %12 %13 %14 %15")
+                        .arg(dstColorId)
+                        .arg(dstSize)
+                        .arg(dst.classId)
+                        .arg(parts[3]).arg(parts[4]).arg(parts[5]).arg(parts[6])  // x y w h
+                        .arg(parts[7]).arg(parts[8]).arg(parts[9]).arg(parts[10]) // x0 y0 x1 y1
+                        .arg(parts[11]).arg(parts[12]).arg(parts[13]).arg(parts[14]); // x2 y2 x3 y3
+                }
                 fileModified = true;
                 labelsReplacedInFile++;
                 replacedLabels++;
@@ -335,4 +374,162 @@ void SettingsDialog::performBatchReplace() {
     }
 
     ui_->batch_result_text->setPlainText(report);
+}
+
+void SettingsDialog::setTheme(int index) {
+    QVariant themeData = ui_->theme_combo->itemData(index);
+    if (!themeData.isValid()) {
+        return; // Invalid selection
+    }
+
+    QString themeId = themeData.toString();
+    controller::AppSettings::instance().settheme(themeId);
+
+    // Apply theme immediately (hot reload)
+    ThemeManager::instance().loadTheme(themeId);
+
+    update();
+}
+
+// ---------- 批量转换功能 ----------
+void SettingsDialog::performBatchConvert() {
+    // 目标格式 = 当前选择的格式（0=11字段, 1=15字段）
+    int targetFormat = controller::AppSettings::instance().outputFormat();
+    QString labelDir = controller::AppSettings::instance().saveDir();
+
+    // 确认对话框
+    QString formatName = (targetFormat == 1) ? "Rect + Points (15 fields)" : "Points Only (11 fields)";
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, "确认转换",
+        QString("将当前目录所有标签转换为:\n%1\n\n继续?").arg(formatName),
+        QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No) return;
+
+    // 获取标签目录
+    QDir dir(labelDir);
+    if (!dir.isAbsolute()) {
+        QString lastImgDir = controller::AppSettings::instance().lastImageDir();
+        if (!lastImgDir.isEmpty()) {
+            dir = QDir(QDir::cleanPath(QFileInfo(lastImgDir).absolutePath() + "/../" + labelDir));
+        }
+    }
+
+    QStringList filters; filters << "*.txt";
+    dir.setNameFilters(filters);
+    QFileInfoList fileList = dir.entryInfoList(QDir::Files | QDir::Readable);
+
+    int successCount = 0, skipCount = 0, failCount = 0;
+
+    for (const QFileInfo& fileInfo : fileList) {
+        QFile file(fileInfo.absoluteFilePath());
+        if (!file.open(QIODevice::ReadWrite | QIODevice::Text)) { failCount++; continue; }
+
+        QTextStream in(&file);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        in.setEncoding(QStringConverter::Utf8);
+#else
+        in.setCodec("UTF-8");
+#endif
+
+        QStringList newLines;
+        bool fileModified = false;
+
+        while (!in.atEnd()) {
+            QString line = in.readLine();
+            int hashIdx = line.indexOf('#');
+            if (hashIdx >= 0) {
+                if (hashIdx == 0) { newLines.append(line); continue; }
+                line = line.left(hashIdx);
+            }
+
+            QString trimmed = line.trimmed();
+            if (trimmed.isEmpty()) { newLines.append(line); continue; }
+
+            QStringList parts = trimmed.simplified().split(' ');
+
+            // 判断当前行的格式
+            bool isCurrent11 = (parts.size() == 11);
+            bool isCurrent15 = (parts.size() == 15);
+
+            // 如果目标是15字段，且当前是11字段 → 转换
+            if (targetFormat == 1 && isCurrent11) {
+                // 11字段 → 15字段
+                // 四个点是PnP锚点，用于透视变换SVG
+                // bbox应该基于SVG的固有尺寸（viewBox）
+                bool ok = true;
+                auto tod = [&](int i) -> double {
+                    bool o = false;
+                    double v = parts[i].toDouble(&o);
+                    ok &= o;
+                    return v;
+                };
+                if (ok) {
+                    // size=0:小SVG, size=1:大SVG
+                    int size = parts[1].toInt();
+
+                    // SVG固有尺寸 (viewBox)
+                    // 小SVG: 557×516, 大SVG: 871×478
+                    double svg_w = (size == 0) ? 557.0 : 871.0;
+                    double svg_h = (size == 0) ? 516.0 : 478.0;
+
+                    // bbox: SVG中心点(0.5, 0.5) + 归一化宽高
+                    double x = 0.5;
+                    double y = 0.5;
+                    double w = svg_w;
+                    double h = svg_h;
+
+                    // SVG锚点 (PnP点，顺序: TL, BL, BR, TR)
+                    double x0 = tod(3), y0 = tod(4);
+                    double x1 = tod(5), y1 = tod(6);
+                    double x2 = tod(7), y2 = tod(8);
+                    double x3 = tod(9), y3 = tod(10);
+
+                    // 输出: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
+                    line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11 %12 %13 %14 %15")
+                        .arg(parts[0]).arg(parts[1]).arg(parts[2])
+                        .arg(x).arg(y).arg(w).arg(h)
+                        .arg(x0).arg(y0).arg(x1).arg(y1).arg(x2).arg(y2).arg(x3).arg(y3);
+                    fileModified = true;
+                }
+            }
+            // 如果目标是11字段，且当前是15字段 → 转换
+            else if (targetFormat == 0 && isCurrent15) {
+                // 15字段 → 11字段
+                // 格式: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
+                //       → color size cls x0 y0 x1 y1 x2 y2 x3 y3
+                // 保留SVG锚点 (x0,y0=TL, x1,y1=BL, x2,y2=BR, x3,y3=TR)
+                // 丢弃bbox信息 (x y w h)
+                line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11")
+                    .arg(parts[0]).arg(parts[1]).arg(parts[2])
+                    .arg(parts[7]).arg(parts[8])   // x0, y0 (TL)
+                    .arg(parts[9]).arg(parts[10])  // x1, y1 (BL)
+                    .arg(parts[11]).arg(parts[12]) // x2, y2 (BR)
+                    .arg(parts[13]).arg(parts[14]); // x3, y3 (TR)
+                fileModified = true;
+            }
+            // 如果已经是目标格式，保持不变
+            else {
+                // 保留原行
+            }
+            newLines.append(line);
+        }
+
+        if (fileModified) {
+            file.resize(0);
+            QTextStream out(&file);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            out.setEncoding(QStringConverter::Utf8);
+#else
+            out.setCodec("UTF-8");
+#endif
+            for (const QString& newLine : newLines) { out << newLine << '\n'; }
+            successCount++;
+        } else {
+            skipCount++;
+        }
+        file.close();
+    }
+
+    QMessageBox::information(this, "转换完成",
+        QString("转换成功: %1 个文件\n已跳过: %2 个文件\n转换失败: %3 个文件").arg(successCount).arg(skipCount).arg(failCount));
 }
