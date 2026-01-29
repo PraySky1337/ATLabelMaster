@@ -3,6 +3,7 @@
 // ===============================
 #include "service/file.hpp"
 #include "../util/id_convert.hpp"
+#include "../util/svg_constants.hpp"
 #include "detector/ai/detector.hpp"
 #include "types.hpp"
 #include <QBuffer>
@@ -143,7 +144,23 @@ void FileService::openFolderDialog(const DataSet& type) {
         QFileDialog::Options(QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly));
     if (dir.isEmpty())
         return;
-    currentDataSet = type; // 设置DataSet用于判断是否导入
+
+    // If type is not specified (Auto), read from settings
+    if (type == DataSet::Auto) {
+        int formatIndex = controller::AppSettings::instance().importFormat();
+        switch (formatIndex) {
+            case 0: currentDataSet = DataSet::LabelMaster2; break;  // LabelMasterV2 (Native)
+            case 1: currentDataSet = DataSet::LabelMaster; break;   // LabelMasterV1
+            case 2: currentDataSet = DataSet::LabelMaster3; break;  // LabelMasterV3 (15 fields)
+            case 3: currentDataSet = DataSet::LabelMasterV4; break; // LabelMasterV4 (13 fields)
+            case 4: currentDataSet = DataSet::HITSZ; break;         // HITSZ
+            case 5: currentDataSet = DataSet::UPC; break;           // UPC
+            case 6: currentDataSet = DataSet::NWPU; break;          // NMPU
+            default: currentDataSet = DataSet::LabelMaster2; break;
+        }
+    } else {
+        currentDataSet = type;
+    }
     openDir(dir);
 }
 // 目录加载完成后如果需要导入，则进行导入，如果不需要导入再尝试选第一张
@@ -210,9 +227,22 @@ bool FileService::openFileAt(const QModelIndex& proxyIndex) {
     saveLastVisited(path);
     const QString lbl = labelFileForImage(path);
     if (QFile::exists(lbl)) {
+        QFile labelFile(lbl);
+        if (labelFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QTextStream in(&labelFile);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            in.setEncoding(QStringConverter::Utf8);
+#else
+            in.setCodec("UTF-8");
+#endif
+            QString labelText = in.readAll();
+            emit labelTextChanged(labelText);
+            labelFile.close();
+        }
         QVector<Armor> armors = readLabelFile(lbl, currentImageSize_);
         emit labelsLoaded(armors);
     } else {
+        emit labelTextChanged("");
         emit labelsLoaded({});
     }
     return true;
@@ -522,9 +552,15 @@ bool FileService::tryImportDataSetAfterLoaded() {
                     QString Text = convertStream.readAll();
                     buffer.close();
                     labelFile.close();
-                    if (labelFile.open(QIODevice::WriteOnly)) {
-                        ts << Text;
-                        labelFile.close();
+                    if (labelFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                        QTextStream outStream(&labelFile);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                        outStream.setEncoding(QStringConverter::Utf8);
+#else
+                        outStream.setCodec("UTF-8");
+#endif
+                        outStream << Text;
+                        // File closed by destructor
                     }
                 }
             }
@@ -671,7 +707,19 @@ QString FileService::labelFileForImage(const QString& imagePath) {
     QFileInfo fi(imagePath);
     QDir labelDir;
     if (controller::AppSettings::instance().saveDir().isEmpty()) {
-        labelDir = QDir(fi.absolutePath() + "/../label");
+        // 支持 label 和 labels 两种目录名
+        QString parentPath = fi.absolutePath() + "/..";
+        QDir labelDirSingle(parentPath + "/label");
+        QDir labelDirPlural(parentPath + "/labels");
+
+        // 优先使用已存在的目录，如果都不存在则使用 label
+        if (labelDirPlural.exists()) {
+            labelDir = labelDirPlural;
+        } else if (labelDirSingle.exists()) {
+            labelDir = labelDirSingle;
+        } else {
+            labelDir = labelDirSingle;  // 默认使用 label
+        }
     } else {
         // 绝对路径
         labelDir = QDir(controller::AppSettings::instance().saveDir());
@@ -708,92 +756,157 @@ bool FileService::writeLabelFile(
     const double H = double(imgSize.height());
     auto norm      = [&](const QPointF& p) { return QPointF(p.x() / W, p.y() / H); };
 
-    // 获取输出格式设置: 0=pts-only(11), 1=xywh+pts(15)
-    bool useNewFormat = (controller::AppSettings::instance().outputFormat() == 1);
+    // 获取输出格式设置: 0=pts-only(11), 1=xywh+pts(15), 2=cls+xywh+pts(13)
+    int outputFormat = controller::AppSettings::instance().outputFormat();
 
     for (const auto& a : armors) {
         const int colorId = IdConvert::colorLetter2Id(a.color);
         const int classId = IdConvert::classToken2Id(
             IdConvert::normalizeClasslToken(
                 a.cls));          // class size
-                                  // classToken2IdCollection(normalizeClasslToken(a.cls),
-                                  // idCollect); // 字符串
 
         const QPointF q0 = norm(a.p0), q1 = norm(a.p1), q2 = norm(a.p2), q3 = norm(a.p3);
 
-        if (useNewFormat) {
+        if (outputFormat == 2) {
+            // LabelMasterV4格式: cls x_c y_c w h x0 y0 x1 y1 x2 y2 x3 y3 (13字段)
+            double x, y, w, h;
+            // 计算SVG透视变换后的真实边界框
+            const auto& svgTemplate = (a.size == 0)
+                ? labelmaster::util::SvgConstants::smallArmor()
+                : labelmaster::util::SvgConstants::bigArmor();
+
+            QPolygonF svg_quad;
+            svg_quad << QPointF(0., 0.)
+                     << QPointF(0., svgTemplate.height)
+                     << QPointF(svgTemplate.width, svgTemplate.height)
+                     << QPointF(svgTemplate.width, 0.);
+
+            QPolygonF img_anchors;
+            img_anchors << a.p0 << a.p1 << a.p2 << a.p3;
+
+            QTransform transform;
+            if (QTransform::quadToQuad(svgTemplate.anchors, img_anchors, transform)) {
+                QPolygonF img_corners = transform.map(svg_quad);
+
+                double min_x = std::numeric_limits<double>::max();
+                double min_y = std::numeric_limits<double>::max();
+                double max_x = std::numeric_limits<double>::lowest();
+                double max_y = std::numeric_limits<double>::lowest();
+
+                for (const auto& pt : img_corners) {
+                    min_x = std::min(min_x, pt.x());
+                    min_y = std::min(min_y, pt.y());
+                    max_x = std::max(max_x, pt.x());
+                    max_y = std::max(max_y, pt.y());
+                }
+
+                w = (max_x - min_x) / W;
+                h = (max_y - min_y) / H;
+                x = (min_x + max_x) / (2.0 * W);
+                y = (min_y + max_y) / (2.0 * H);
+            } else {
+                double min_x = std::min({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+                double min_y = std::min({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+                double max_x = std::max({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+                double max_y = std::max({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+                w = (max_x - min_x) / W;
+                h = (max_y - min_y) / H;
+                x = (min_x + max_x) / (2.0 * W);
+                y = (min_y + max_y) / (2.0 * H);
+            }
+
+            // Clamp到[0,1]范围
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            x = clamp01(x);
+            y = clamp01(y);
+            w = clamp01(w);
+            h = clamp01(h);
+            QPointF q0_clamped(clamp01(q0.x()), clamp01(q0.y()));
+            QPointF q1_clamped(clamp01(q1.x()), clamp01(q1.y()));
+            QPointF q2_clamped(clamp01(q2.x()), clamp01(q2.y()));
+            QPointF q3_clamped(clamp01(q3.x()), clamp01(q3.y()));
+
+            // 写入: cls x_c y_c w_h x0 y0 x1 y1 x2 y2 x3 y3
+            ts << a.cls << ' '
+               << x << ' ' << y << ' ' << w << ' ' << h << ' '
+               << q0_clamped.x() << ' ' << q0_clamped.y() << ' '
+               << q1_clamped.x() << ' ' << q1_clamped.y() << ' '
+               << q2_clamped.x() << ' ' << q2_clamped.y() << ' '
+               << q3_clamped.x() << ' ' << q3_clamped.y() << '\n';
+        } else if (outputFormat == 1) {
             // 新格式: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
             // 四个点是PnP锚点，bbox需要计算SVG透视变换后的真实边界框
+            // 每次都重新计算bbox，因为角点可能被用户修改
             double x, y, w, h;
-            if (a.norm_x >= 0) {
-                // 使用已存储的 xywh 值
-                x = a.norm_x; y = a.norm_y; w = a.norm_w; h = a.norm_h;
+            // 计算SVG透视变换后的真实边界框 - 使用集中管理的常量
+            const auto& svgTemplate = (a.size == 0)
+                ? labelmaster::util::SvgConstants::smallArmor()
+                : labelmaster::util::SvgConstants::bigArmor();
+
+            // SVG外框四个角 (TL, BL, BR, TR)
+            QPolygonF svg_quad;
+            svg_quad << QPointF(0., 0.)
+                     << QPointF(0., svgTemplate.height)
+                     << QPointF(svgTemplate.width, svgTemplate.height)
+                     << QPointF(svgTemplate.width, 0.);
+
+            // 图像中的四个锚点 (像素坐标)
+            QPolygonF img_anchors;
+            img_anchors << a.p0 << a.p1 << a.p2 << a.p3;
+
+            // 计算从SVG坐标系到图像坐标系的单应性矩阵
+            QTransform transform;
+            if (QTransform::quadToQuad(svgTemplate.anchors, img_anchors, transform)) {
+                // 将SVG外框四个角变换到图像坐标
+                QPolygonF img_corners = transform.map(svg_quad);
+
+                // 计算边界框 (像素坐标)
+                double min_x = std::numeric_limits<double>::max();
+                double min_y = std::numeric_limits<double>::max();
+                double max_x = std::numeric_limits<double>::lowest();
+                double max_y = std::numeric_limits<double>::lowest();
+
+                for (const auto& pt : img_corners) {
+                    min_x = std::min(min_x, pt.x());
+                    min_y = std::min(min_y, pt.y());
+                    max_x = std::max(max_x, pt.x());
+                    max_y = std::max(max_y, pt.y());
+                }
+
+                // 转换为归一化坐标: 中心点x, 中心点y, 宽度, 高度
+                w = (max_x - min_x) / W;
+                h = (max_y - min_y) / H;
+                x = (min_x + max_x) / (2.0 * W);
+                y = (min_y + max_y) / (2.0 * H);
             } else {
-                // 计算SVG透视变换后的真实边界框
-                // SVG固有尺寸: 小SVG(size=0): 557×516, 大SVG(size=1): 871×478
-                // SVG锚点: 小SVG(0,143.26)(0,372.74)(557,372.74)(557,143.26)
-                //          大SVG(0,140.61)(0,347.39)(871,347.39)(871,140.61)
-                double svg_w, svg_h;
-                QPolygonF svg_anchors;
-                if (a.size == 0) {  // 小装甲
-                    svg_w = 557.0; svg_h = 516.0;
-                    svg_anchors << QPointF(0., 143.26) << QPointF(0., 372.74)
-                                << QPointF(557., 372.74) << QPointF(557., 143.26);
-                } else {  // 大装甲
-                    svg_w = 871.0; svg_h = 478.0;
-                    svg_anchors << QPointF(0., 140.61) << QPointF(0., 347.39)
-                                << QPointF(871., 347.39) << QPointF(871., 140.61);
-                }
-
-                // SVG外框四个角 (TL, BL, BR, TR)
-                QPolygonF svg_quad;
-                svg_quad << QPointF(0., 0.) << QPointF(0., svg_h)
-                         << QPointF(svg_w, svg_h) << QPointF(svg_w, 0.);
-
-                // 图像中的四个锚点 (像素坐标)
-                QPolygonF img_anchors;
-                img_anchors << a.p0 << a.p1 << a.p2 << a.p3;
-
-                // 计算从SVG坐标系到图像坐标系的单应性矩阵
-                QTransform transform;
-                if (QTransform::quadToQuad(svg_anchors, img_anchors, transform)) {
-                    // 将SVG外框四个角变换到图像坐标
-                    QPolygonF img_corners = transform.map(svg_quad);
-
-                    // 计算边界框 (像素坐标)
-                    double min_x = std::numeric_limits<double>::max();
-                    double min_y = std::numeric_limits<double>::max();
-                    double max_x = std::numeric_limits<double>::lowest();
-                    double max_y = std::numeric_limits<double>::lowest();
-
-                    for (const auto& pt : img_corners) {
-                        min_x = std::min(min_x, pt.x());
-                        min_y = std::min(min_y, pt.y());
-                        max_x = std::max(max_x, pt.x());
-                        max_y = std::max(max_y, pt.y());
-                    }
-
-                    // 转换为归一化坐标: 中心点x, 中心点y, 宽度, 高度
-                    w = (max_x - min_x) / W;
-                    h = (max_y - min_y) / H;
-                    x = (min_x + max_x) / (2.0 * W);
-                    y = (min_y + max_y) / (2.0 * H);
-                } else {
-                    // 透视变换失败，使用锚点的边界框作为后备
-                    double min_x = std::min({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
-                    double min_y = std::min({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
-                    double max_x = std::max({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
-                    double max_y = std::max({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
-                    w = (max_x - min_x) / W;
-                    h = (max_y - min_y) / H;
-                    x = (min_x + max_x) / (2.0 * W);
-                    y = (min_y + max_y) / (2.0 * H);
-                }
+                // 透视变换失败，使用锚点的边界框作为后备
+                double min_x = std::min({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+                double min_y = std::min({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+                double max_x = std::max({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+                double max_y = std::max({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+                w = (max_x - min_x) / W;
+                h = (max_y - min_y) / H;
+                x = (min_x + max_x) / (2.0 * W);
+                y = (min_y + max_y) / (2.0 * H);
             }
+
+            // Clamp bbox和kpts到[0,1]范围
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            x = clamp01(x);
+            y = clamp01(y);
+            w = clamp01(w);
+            h = clamp01(h);
+            QPointF q0_clamped(clamp01(q0.x()), clamp01(q0.y()));
+            QPointF q1_clamped(clamp01(q1.x()), clamp01(q1.y()));
+            QPointF q2_clamped(clamp01(q2.x()), clamp01(q2.y()));
+            QPointF q3_clamped(clamp01(q3.x()), clamp01(q3.y()));
+
             ts << colorId << ' ' << a.size << ' ' << classId << ' '
                << x << ' ' << y << ' ' << w << ' ' << h << ' '
-               << q0.x() << ' ' << q0.y() << ' ' << q1.x() << ' ' << q1.y() << ' '
-               << q2.x() << ' ' << q2.y() << ' ' << q3.x() << ' ' << q3.y() << '\n';
+               << q0_clamped.x() << ' ' << q0_clamped.y() << ' '
+               << q1_clamped.x() << ' ' << q1_clamped.y() << ' '
+               << q2_clamped.x() << ' ' << q2_clamped.y() << ' '
+               << q3_clamped.x() << ' ' << q3_clamped.y() << '\n';
         } else {
             // 旧格式: color size cls x0 y0 x1 y1 x2 y2 x3 y3
             ts << colorId << ' ' << a.size << ' ' << classId << ' ' << q0.x() << ' ' << q0.y() << ' '
@@ -801,6 +914,8 @@ bool FileService::writeLabelFile(
                << q3.y() << '\n';
         }
     }
+    ts.flush();
+    // File closed by destructor
     return true;
 }
 
@@ -828,9 +943,9 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         if (line.isEmpty())
             continue;
 
-        // 支持 11字段和 15字段 格式
+        // 支持 11字段、13字段(V4)和 15字段 格式
         const QStringList t = line.simplified().split(' ');
-        if (t.size() != 11 && t.size() != 15)
+        if (t.size() != 11 && t.size() != 13 && t.size() != 15)
             continue;
 
         bool ok  = true;
@@ -842,20 +957,69 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
         };
 
         Armor a;
-        // 颜色字段：兼容"数字"
-        bool okInt  = false;
-        int colorId = t.at(0).toInt(&okInt);
-        int size    = t.at(1).toInt(&okInt);
-        int classId = t.at(2).toInt(&okInt);
-        if (!okInt) {
-            continue;
-        }
-        a.color   = IdConvert::colorId2Letter(colorId);
-        a.cls     = IdConvert::idCollect2Token(classId);
-        a.size    = size;
-        a.score   = 0.f;
+        a.score = 0.f;
 
-        if (t.size() == 15) {
+        // 检测格式类型：V4格式第一个字段是字符串(如"R1")，旧格式是数字
+        bool isFirstFieldString = false;
+        if (t.size() == 13) {
+            // V4格式: cls x_c y_c w h x0 y0 x1 y1 x2 y2 x3 y3
+            // 第一个字段可能是字符串如 "R1", "B2", "G3"
+            QChar firstChar = t.at(0).isEmpty() ? QChar() : t.at(0).at(0);
+            isFirstFieldString = firstChar.isLetter();
+        }
+
+        if (isFirstFieldString && t.size() == 13) {
+            // LabelMasterV4 格式: cls x_c y_c w h x0 y0 x1 y1 x2 y2 x3 y3
+            QString cls = t.at(0);
+            if (!cls.isEmpty()) {
+                a.color = cls.at(0).toUpper(); // R, B, G, P
+            }
+            a.cls = cls;
+
+            // bbox: x_c y_c w h (归一化)
+            double x = tod(1), y = tod(2), w = tod(3), h = tod(4);
+            // 角点: x0 y0 x1 y1 x2 y2 x3 y3 (归一化)
+            double x0 = tod(5), y0 = tod(6), x1 = tod(7), y1 = tod(8);
+            double x2 = tod(9), y2 = tod(10), x3 = tod(11), y3 = tod(12);
+            if (!ok)
+                continue;
+
+            // 存储归一化bbox
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            a.norm_x = clamp01(x);
+            a.norm_y = clamp01(y);
+            a.norm_w = clamp01(w);
+            a.norm_h = clamp01(h);
+
+            // 反归一化角点到像素坐标
+            a.p0 = QPointF(x0 * W, y0 * H);
+            a.p1 = QPointF(x1 * W, y1 * H);
+            a.p2 = QPointF(x2 * W, y2 * H);
+            a.p3 = QPointF(x3 * W, y3 * H);
+
+            // 存储归一化角点
+            a.norm_p0 = QPointF(x0, y0);
+            a.norm_p1 = QPointF(x1, y1);
+            a.norm_p2 = QPointF(x2, y2);
+            a.norm_p3 = QPointF(x3, y3);
+
+            // 通过宽高比判断size
+            double aspectRatio = w / (h + 1e-6);
+            a.size = (aspectRatio > 2.5) ? 1 : 0;  // 1 = big, 0 = small
+        } else {
+            // 旧格式：前三个字段是数字
+            bool okInt  = false;
+            int colorId = t.at(0).toInt(&okInt);
+            int size    = t.at(1).toInt(&okInt);
+            int classId = t.at(2).toInt(&okInt);
+            if (!okInt) {
+                continue;
+            }
+            a.color   = IdConvert::colorId2Letter(colorId);
+            a.cls     = IdConvert::idCollect2Token(classId);
+            a.size    = size;
+
+            if (t.size() == 15) {
             // 新格式: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
             double x = tod(3), y = tod(4), w = tod(5), h = tod(6);
             double x0 = tod(7), y0 = tod(8), x1 = tod(9), y1 = tod(10);
@@ -868,19 +1032,36 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
             const double my = std::max({std::fabs(y0), std::fabs(y1), std::fabs(y2), std::fabs(y3)});
             const bool normalized = (mx <= 1.5 && my <= 1.5 && W > 0 && H > 0);
 
+            // 首先反归一化角点得到像素坐标（在判断之后，不先clamp）
             auto denorm = [&](double vx, double vy) -> QPointF {
                 return normalized ? QPointF(vx * W, vy * H) : QPointF(vx, vy);
             };
-
-            a.norm_x = x;
-            a.norm_y = y;
-            a.norm_w = w;
-            a.norm_h = h;
 
             a.p0 = denorm(x0, y0);
             a.p1 = denorm(x1, y1);
             a.p2 = denorm(x2, y2);
             a.p3 = denorm(x3, y3);
+
+            // 对于bbox，如果数据是归一化的，则存储clamp后的归一化值
+            // 如果数据是像素坐标，需要先归一化再clamp
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            if (normalized) {
+                // 数据已经是归一化的，直接clamp并存储
+                a.norm_x = clamp01(x);
+                a.norm_y = clamp01(y);
+                a.norm_w = clamp01(w);
+                a.norm_h = clamp01(h);
+            } else {
+                // 数据是像素坐标，先归一化再clamp
+                if (W > 0 && H > 0) {
+                    a.norm_x = clamp01(x / W);
+                    a.norm_y = clamp01(y / H);
+                    a.norm_w = clamp01(w / W);
+                    a.norm_h = clamp01(h / H);
+                } else {
+                    a.norm_x = a.norm_y = a.norm_w = a.norm_h = -1;
+                }
+            }
         } else {
             // 旧格式: color size cls x0 y0 x1 y1 x2 y2 x3 y3
             double x0 = tod(3), y0 = tod(4), x1 = tod(5), y1 = tod(6), x2 = tod(7), y2 = tod(8),
@@ -903,6 +1084,7 @@ QVector<Armor> FileService::readLabelFile(const QString& labelPath, const QSize&
             a.p3 = denorm(x3, y3);
             a.norm_x = -1; // 标记非新格式
         }
+        }  // 旧格式（11/15字段）处理结束
 
         res.push_back(a);
     }

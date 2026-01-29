@@ -49,7 +49,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
        <item>
-        <widget class="QTextEdit" name="label_content_edit">
+        <widget class="QListView" name="list_view">
          <property name="sizePolicy">
           <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
            <horstretch>0</horstretch>
@@ -67,12 +67,6 @@
            <width>16777215</width>
            <height>400</height>
           </size>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-         <property name="placeholderText">
-          <string>标签文件内容将在此显示</string>
          </property>
         </widget>
        </item>
@@ -296,11 +290,20 @@
     <property name="title">
      <string>文件(&amp;F)</string>
     </property>
-
+    <widget class="QMenu" name="menuImport">
+     <property name="title">
+      <string>导入其他数据集</string>
+     </property>
+     <addaction name="actionLMV1"/>
+     <addaction name="actionHITSZ"/>
+     <addaction name="actionUPC"/>
+     <addaction name="actionNMPU"/>
+     <addaction name="actionLMV3"/>
+    </widget>
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionDelete"/>
-
+    <addaction name="menuImport"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
     <property name="title">
@@ -392,7 +395,11 @@
     <string>Esc</string>
    </property>
   </action>
-
+  <action name="actionLMV1">
+   <property name="text">
+    <string>LabelMasterV1数据集</string>
+   </property>
+  </action>
   <action name="actionStas">
    <property name="text">
     <string>数据统计</string>
@@ -401,10 +408,29 @@
     <string>F1</string>
    </property>
   </action>
-
-
-
-
+  <action name="actionHITSZ">
+   <property name="text">
+    <string>南工骁鹰(HITSZ)数据集</string>
+   </property>
+  </action>
+  <action name="actionUPC">
+   <property name="text">
+    <string>RPS(UPC)数据集</string>
+   </property>
+  </action>
+  <action name="actionNMPU">
+   <property name="text">
+    <string>NMPU数据集</string>
+   </property>
+  </action>
+  <action name="actionLMV3">
+   <property name="objectName">
+    <string>actionLMV3</string>
+   </property>
+   <property name="text">
+    <string>LabelMasterV3数据集 (15字段)</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>

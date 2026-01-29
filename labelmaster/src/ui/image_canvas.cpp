@@ -1,6 +1,7 @@
 #include "image_canvas.hpp"
 #include "../util/bridge.hpp"
 #include "../util/id_convert.hpp"
+#include "../util/svg_constants.hpp"
 #include "controller/settings.hpp"
 #include "info_dialog.h"
 #include "mainwindow.hpp"
@@ -201,6 +202,8 @@ void ImageCanvas::clearDetections() {
 }
 void ImageCanvas::addDetection(const Armor& a0) {
     Armor a = a0;
+    // 确保BBox与角点同步
+    updateBBoxFromCorners(a);
     dets_.append(a);
     const int idx = dets_.size() - 1;
     emit detectionUpdated(idx, dets_.back());
@@ -210,6 +213,8 @@ void ImageCanvas::updateDetection(int index, const Armor& a0) {
     if (index < 0 || index >= dets_.size())
         return;
     dets_[index] = a0;
+    // 确保BBox与角点同步
+    updateBBoxFromCorners(dets_[index]);
     emit detectionUpdated(index, dets_[index]);
     update();
 }
@@ -261,9 +266,77 @@ bool ImageCanvas::setSelectedInfo(const QString& cls, const QString& color, cons
     dets_[selectedIndex_].size  = size;
     dets_[selectedIndex_].color = color.isEmpty() ? "Gray" : color;
     dets_[selectedIndex_].cls   = cls.isEmpty() ? QStringLiteral("unknown") : cls;
+    // 尺寸变化会影响BBox计算（不同尺寸使用不同SVG锚点），重新计算
+    updateBBoxFromCorners(dets_[selectedIndex_]);
     emit detectionUpdated(selectedIndex_, dets_[selectedIndex_]);
     update();
     return true;
+}
+
+/* ===== BBox计算 ===== */
+void ImageCanvas::updateBBoxFromCorners(Armor& a) const {
+    // 使用SVG透视变换计算归一化边界框
+    // 逻辑与 file.cpp 中的 writeLabelFile() 完全相同
+    const double W = double(img_.width());
+    const double H = double(img_.height());
+
+    // SVG固有尺寸和锚点 - 使用集中管理的常量
+    const auto& svgTemplate = (a.size == 0)
+        ? labelmaster::util::SvgConstants::smallArmor()
+        : labelmaster::util::SvgConstants::bigArmor();
+
+    // SVG外框四个角 (TL, BL, BR, TR)
+    QPolygonF svg_quad;
+    svg_quad << QPointF(0., 0.)
+             << QPointF(0., svgTemplate.height)
+             << QPointF(svgTemplate.width, svgTemplate.height)
+             << QPointF(svgTemplate.width, 0.);
+
+    // 图像中的四个锚点 (像素坐标)
+    QPolygonF img_anchors;
+    img_anchors << a.p0 << a.p1 << a.p2 << a.p3;
+
+    // 计算从SVG坐标系到图像坐标系的单应性矩阵
+    QTransform transform;
+    if (QTransform::quadToQuad(svgTemplate.anchors, img_anchors, transform)) {
+        // 将SVG外框四个角变换到图像坐标
+        QPolygonF img_corners = transform.map(svg_quad);
+
+        // 计算边界框 (像素坐标)
+        double min_x = std::numeric_limits<double>::max();
+        double min_y = std::numeric_limits<double>::max();
+        double max_x = std::numeric_limits<double>::lowest();
+        double max_y = std::numeric_limits<double>::lowest();
+
+        for (const auto& pt : img_corners) {
+            min_x = std::min(min_x, pt.x());
+            min_y = std::min(min_y, pt.y());
+            max_x = std::max(max_x, pt.x());
+            max_y = std::max(max_y, pt.y());
+        }
+
+        // 转换为归一化坐标: 中心点x, 中心点y, 宽度, 高度
+        if (W > 0 && H > 0) {
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            a.norm_w = clamp01((max_x - min_x) / W);
+            a.norm_h = clamp01((max_y - min_y) / H);
+            a.norm_x = clamp01((min_x + max_x) / (2.0 * W));
+            a.norm_y = clamp01((min_y + max_y) / (2.0 * H));
+        }
+    } else {
+        // 透视变换失败，使用锚点的边界框作为后备
+        double min_x = std::min({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+        double min_y = std::min({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+        double max_x = std::max({a.p0.x(), a.p1.x(), a.p2.x(), a.p3.x()});
+        double max_y = std::max({a.p0.y(), a.p1.y(), a.p2.y(), a.p3.y()});
+        if (W > 0 && H > 0) {
+            auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+            a.norm_w = clamp01((max_x - min_x) / W);
+            a.norm_h = clamp01((max_y - min_y) / H);
+            a.norm_x = clamp01((min_x + max_x) / (2.0 * W));
+            a.norm_y = clamp01((min_y + max_y) / (2.0 * H));
+        }
+    }
 }
 
 /* ===== 导入/导出 ===== */
@@ -334,23 +407,15 @@ void ImageCanvas::drawDetections(QPainter& p) const {
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setClipRect(imageRectOnWidget());
 
+    // 使用集中管理的颜色映射
     auto colorOf = [](const QString& c) -> QColor {
-        if (c.isEmpty())
-            return QColor(0, 200, 255);
-        const QChar C = c.at(0).toUpper();
-        if (C == 'R')
-            return {255, 70, 70};         // 红
-        if (C == 'B')
-            return QColor(61, 165, 255);  // 蓝
-        if (C == 'G')
-            return QColor(170, 170, 180); // 灰
-        if (C == 'P')
-            return QColor(255, 192, 203); // 紫
-        return QColor(0, 200, 255);
+        return labelmaster::util::ColorMapper::colorForLetter(c);
     };
 
     // 检查是否使用15字段格式 (Rect + Points)
     bool showRectOverlay = controller::AppSettings::instance().outputFormat() == 1;
+    const double W = img_.width();
+    const double H = img_.height();
 
     for (int i = 0; i < dets_.size(); ++i) {
         const auto& d = dets_[i];
@@ -362,50 +427,60 @@ void ImageCanvas::drawDetections(QPainter& p) const {
         const bool isHover = (i == hoverIndex_);
         const QColor base  = colorOf(d.color);
 
-        // 绘制SVG边界矩形 (当使用15字段格式时，动态计算真实BBox)
+        // 绘制SVG边界矩形 (当使用15字段格式时，优先使用文件中的BBox)
         if (showRectOverlay) {
-            // 计算SVG透视变换后的真实边界框
-            double svg_w, svg_h;
-            QPolygonF svg_anchors;
-            if (d.size == 0) {  // 小装甲
-                svg_w = 557.0; svg_h = 516.0;
-                svg_anchors << QPointF(0., 143.26) << QPointF(0., 372.74)
-                            << QPointF(557., 372.74) << QPointF(557., 143.26);
-            } else {  // 大装甲
-                svg_w = 871.0; svg_h = 478.0;
-                svg_anchors << QPointF(0., 140.61) << QPointF(0., 347.39)
-                            << QPointF(871., 347.39) << QPointF(871., 140.61);
+            QRectF rectImg;
+
+            // 优先使用文件中存储的归一化 bbox 值
+            if (d.norm_x >= 0) {
+                // 从归一化坐标转换为像素坐标
+                double cx = d.norm_x * W;
+                double cy = d.norm_y * H;
+                double w  = d.norm_w * W;
+                double h  = d.norm_h * H;
+                rectImg = QRectF(cx - w/2, cy - h/2, w, h);
+            } else {
+                // 没有存储的 bbox，动态计算SVG透视变换后的真实边界框
+                // SVG固有尺寸和锚点 - 使用集中管理的常量
+                const auto& svgTemplate = (d.size == 0)
+                    ? labelmaster::util::SvgConstants::smallArmor()
+                    : labelmaster::util::SvgConstants::bigArmor();
+
+                // SVG外框四个角 (TL, BL, BR, TR)
+                QPolygonF svg_quad;
+                svg_quad << QPointF(0., 0.)
+                         << QPointF(0., svgTemplate.height)
+                         << QPointF(svgTemplate.width, svgTemplate.height)
+                         << QPointF(svgTemplate.width, 0.);
+
+                // 图像中的四个锚点
+                QPolygonF img_anchors;
+                img_anchors << d.p0 << d.p1 << d.p2 << d.p3;
+
+                // 计算单应性矩阵并变换SVG外框
+                QTransform transform;
+                if (QTransform::quadToQuad(svgTemplate.anchors, img_anchors, transform)) {
+                    QPolygonF img_corners = transform.map(svg_quad);
+
+                    // 计算边界框
+                    double min_x = std::numeric_limits<double>::max();
+                    double min_y = std::numeric_limits<double>::max();
+                    double max_x = std::numeric_limits<double>::lowest();
+                    double max_y = std::numeric_limits<double>::lowest();
+
+                    for (const auto& pt : img_corners) {
+                        min_x = std::min(min_x, pt.x());
+                        min_y = std::min(min_y, pt.y());
+                        max_x = std::max(max_x, pt.x());
+                        max_y = std::max(max_y, pt.y());
+                    }
+
+                    rectImg = QRectF(min_x, min_y, max_x - min_x, max_y - min_y);
+                }
             }
 
-            // SVG外框四个角 (TL, BL, BR, TR)
-            QPolygonF svg_quad;
-            svg_quad << QPointF(0., 0.) << QPointF(0., svg_h)
-                     << QPointF(svg_w, svg_h) << QPointF(svg_w, 0.);
-
-            // 图像中的四个锚点
-            QPolygonF img_anchors;
-            img_anchors << d.p0 << d.p1 << d.p2 << d.p3;
-
-            // 计算单应性矩阵并变换SVG外框
-            QTransform transform;
-            if (QTransform::quadToQuad(svg_anchors, img_anchors, transform)) {
-                QPolygonF img_corners = transform.map(svg_quad);
-
-                // 计算边界框
-                double min_x = std::numeric_limits<double>::max();
-                double min_y = std::numeric_limits<double>::max();
-                double max_x = std::numeric_limits<double>::lowest();
-                double max_y = std::numeric_limits<double>::lowest();
-
-                for (const auto& pt : img_corners) {
-                    min_x = std::min(min_x, pt.x());
-                    min_y = std::min(min_y, pt.y());
-                    max_x = std::max(max_x, pt.x());
-                    max_y = std::max(max_y, pt.y());
-                }
-
-                // 转换为Widget坐标并绘制
-                QRectF rectImg(min_x, min_y, max_x - min_x, max_y - min_y);
+            // 转换为Widget坐标并绘制
+            if (!rectImg.isEmpty()) {
                 QRectF rectW = QRectF(
                     imageToWidget(rectImg.topLeft()),
                     imageToWidget(rectImg.bottomRight())
@@ -656,6 +731,8 @@ void ImageCanvas::createNewDetection() { // 画框
     a.color       = currentColor_.isEmpty() ? QStringLiteral("G") : currentColor_;
     a.size        = currentSize_;
     currentColor_ = "";
+    // 自动计算归一化BBox
+    updateBBoxFromCorners(a);
     dets_.append(a);
     emit annotationCommitted(a);
     emit detectionUpdated(dets_.size() - 1, a);
@@ -672,7 +749,8 @@ void ImageCanvas::mouseReleaseEvent(QMouseEvent* e) {
             if (!dragRectImg_.isNull()) {
                 const QRect r = clampRectToImage(dragRectImg_.normalized());
                 if (r.width() >= 2 && r.height() >= 2) {
-                    if (isMaskMode) {         // 绘制Mask
+                    // 检查释放时的修饰键状态，而不是依赖存储的标志
+                    if (e->modifiers() & Qt::ControlModifier) {  // 绘制Mask
                         maskRects_.append(r); // 添加到Mask信息用于绘制
                         dragRectImg_ = QRect();
                     } else {                  // 画框
@@ -751,24 +829,41 @@ void ImageCanvas::mouseMoveEvent(QMouseEvent* e) {
             qreal tx;
 
             switch (dragHandle_) {
-            case 0: {         // p0：左上 —— 和右边 p3→p2 平行
+            case 0: {         // p0：左上 —— 和右边 p3->p2 平行
                 const QPointF t = A.p3 - A.p2;
-                tx              = A.p1.x() + (t.x() / t.y()) * (A.p0.y() - A.p1.y());
+                if (qFuzzyIsNull(t.y())) {
+                    // 平行线是垂直的，直接使用输入的x坐标
+                    tx = pi.x();
+                } else {
+                    tx = A.p1.x() + (t.x() / t.y()) * (A.p0.y() - A.p1.y());
+                }
                 break;
             }
-            case 1: {         // p1：左下 —— 和右边 p3→p2 平行
+            case 1: {         // p1：左下 —— 和右边 p3->p2 平行
                 const QPointF t = A.p3 - A.p2;
-                tx              = A.p0.x() + (t.x() / t.y()) * (A.p1.y() - A.p0.y());
+                if (qFuzzyIsNull(t.y())) {
+                    tx = pi.x();
+                } else {
+                    tx = A.p0.x() + (t.x() / t.y()) * (A.p1.y() - A.p0.y());
+                }
                 break;
             }
-            case 2: {         // p2：右下 —— 和左边 p0→p1 平行
+            case 2: {         // p2：右下 —— 和左边 p0->p1 平行
                 const QPointF t = A.p0 - A.p1;
-                tx              = A.p3.x() + (t.x() / t.y()) * (A.p2.y() - A.p3.y());
+                if (qFuzzyIsNull(t.y())) {
+                    tx = pi.x();
+                } else {
+                    tx = A.p3.x() + (t.x() / t.y()) * (A.p2.y() - A.p3.y());
+                }
                 break;
             }
-            case 3: {         // p3：右上 —— 和左边 p0→p1 平行
+            case 3: {         // p3：右上 —— 和左边 p0->p1 平行
                 const QPointF t = A.p0 - A.p1;
-                tx              = A.p2.x() + (t.x() / t.y()) * (A.p3.y() - A.p2.y());
+                if (qFuzzyIsNull(t.y())) {
+                    tx = pi.x();
+                } else {
+                    tx = A.p2.x() + (t.x() / t.y()) * (A.p3.y() - A.p2.y());
+                }
                 break;
             }
             }
@@ -788,7 +883,9 @@ void ImageCanvas::mouseMoveEvent(QMouseEvent* e) {
         } else {
             setPosByIndex(dragHandle_, pi);
         }
-        // 不在移动中重排，避免把当前拖拽句柄“换角”
+        // 自动更新归一化BBox（使用SVG透视变换）
+        updateBBoxFromCorners(A);
+        // 不在移动中重排，避免把当前拖拽句柄"换角"
         emit detectionUpdated(selectedIndex_, dets_[selectedIndex_]);
         update();
         return;

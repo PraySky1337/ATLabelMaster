@@ -3,3 +3,4 @@ bin
 build
 log
 LabelMaster/opt/labelmaster/labelmaster
+best.onnx

@@ -42,6 +42,7 @@ public slots:
     void performBatchReplace();                // 批量替换标签
     void performBatchConvert();                // 批量转换标签格式
     void setTheme(int index);                  // 设置主题
+    void setimportFormat(int index);           // 设置导入格式
     // void resotre();                            // 恢复默认值
 };
 

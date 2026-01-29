@@ -2,6 +2,7 @@
 #include "controller/settings.hpp"
 #include "ui_settings_dialog.h"
 #include "util/id_convert.hpp"
+#include "util/svg_constants.hpp"
 #include "ui/pixel_widgets/theme_manager.hpp"
 #include <qcombobox.h>
 #include <qdir.h>
@@ -15,6 +16,9 @@
 #include <qplaintextedit.h>
 #include <qvariant.h>
 #include <qwidget.h>
+#include <QTransform>
+#include <QPolygonF>
+#include <limits>
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 #include <QStringConverter>
 #endif
@@ -81,8 +85,11 @@ SettingsDialog::SettingsDialog(QWidget* parent)
             this, [this](int index) {
         controller::AppSettings::instance().setoutputFormat(index);
     });
-    connect(ui_->batch_convert_button, &QPushButton::clicked,
-            this, &SettingsDialog::performBatchConvert);
+    // Note: batch_convert_button signal is already connected in settings_dialog.ui
+    // 初始化导入格式选择
+    ui_->import_format_combo->setCurrentIndex(controller::AppSettings::instance().importFormat());
+    connect(ui_->import_format_combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &SettingsDialog::setimportFormat);
 }
 void SettingsDialog::SaveDirEditUpdate() {
     const QString dir = QFileDialog::getExistingDirectory(
@@ -166,7 +173,7 @@ SettingsDialog::LabelInfo SettingsDialog::getLabelFromCombos(
     if (sizeText == "All") {
         info.size = -1;  // -1 表示匹配所有大小
     } else {
-        info.size = (sizeText == "Small" || sizeText == "BIg") ? 0 : 1;
+        info.size = (sizeText == "Small") ? 0 : 1;
     }
 
     // 类别: G(0), 1-5(1-5), O(6), B(7)
@@ -324,12 +331,13 @@ void SettingsDialog::performBatchReplace() {
             newLines.append(line);
         }
 
-        file.close();
+        // file destructor will close automatically, but explicit close is safe
 
         // 如果文件被修改，写回
         if (fileModified) {
-            if (file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-                QTextStream out(&file);
+            QFile writeFile(filePath);
+            if (writeFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+                QTextStream out(&writeFile);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
                 out.setEncoding(QStringConverter::Utf8);
 #else
@@ -338,9 +346,11 @@ void SettingsDialog::performBatchReplace() {
                 for (const QString& newLine : newLines) {
                     out << newLine << '\n';
                 }
-                file.close();
+                // writeFile destructor closes automatically
                 modifiedFiles++;
                 modifiedFileNames.append(fileInfo.fileName());
+            } else {
+                qWarning() << "Failed to open file for writing:" << filePath;
             }
         }
     }
@@ -454,8 +464,9 @@ void SettingsDialog::performBatchConvert() {
             // 如果目标是15字段，且当前是11字段 → 转换
             if (targetFormat == 1 && isCurrent11) {
                 // 11字段 → 15字段
-                // 四个点是PnP锚点，用于透视变换SVG
-                // bbox应该基于SVG的固有尺寸（viewBox）
+                // color size cls x0 y0 x1 y1 x2 y2 x3 y3
+                // → color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
+
                 bool ok = true;
                 auto tod = [&](int i) -> double {
                     bool o = false;
@@ -464,31 +475,85 @@ void SettingsDialog::performBatchConvert() {
                     return v;
                 };
                 if (ok) {
-                    // size=0:小SVG, size=1:大SVG
+                    // 读取基本信息
                     int size = parts[1].toInt();
 
-                    // SVG固有尺寸 (viewBox)
-                    // 小SVG: 557×516, 大SVG: 871×478
-                    double svg_w = (size == 0) ? 557.0 : 871.0;
-                    double svg_h = (size == 0) ? 516.0 : 478.0;
+                    // 读取四个锚点（归一化坐标）
+                    QPointF p0(tod(3), tod(4));  // TL
+                    QPointF p1(tod(5), tod(6));  // BL
+                    QPointF p2(tod(7), tod(8));  // BR
+                    QPointF p3(tod(9), tod(10)); // TR
 
-                    // bbox: SVG中心点(0.5, 0.5) + 归一化宽高
-                    double x = 0.5;
-                    double y = 0.5;
-                    double w = svg_w;
-                    double h = svg_h;
+                    // 获取SVG模板
+                    const auto& svgTemplate = (size == 0)
+                        ? labelmaster::util::SvgConstants::smallArmor()
+                        : labelmaster::util::SvgConstants::bigArmor();
 
-                    // SVG锚点 (PnP点，顺序: TL, BL, BR, TR)
-                    double x0 = tod(3), y0 = tod(4);
-                    double x1 = tod(5), y1 = tod(6);
-                    double x2 = tod(7), y2 = tod(8);
-                    double x3 = tod(9), y3 = tod(10);
+                    // SVG四边形（四个角点）
+                    QPolygonF svg_quad;
+                    svg_quad << QPointF(0., 0.)
+                             << QPointF(0., svgTemplate.height)
+                             << QPointF(svgTemplate.width, svgTemplate.height)
+                             << QPointF(svgTemplate.width, 0.);
+
+                    // 图像锚点（归一化坐标）
+                    QPolygonF img_anchors;
+                    img_anchors << p0 << p1 << p2 << p3;
+
+                    // 透视变换
+                    QTransform transform;
+                    double x, y, w, h;
+
+                    if (QTransform::quadToQuad(svgTemplate.anchors, img_anchors, transform)) {
+                        // 将SVG四边形变换到图像空间
+                        QPolygonF img_corners = transform.map(svg_quad);
+
+                        // 计算边界框（最小外接矩形）
+                        double min_x = std::numeric_limits<double>::max();
+                        double min_y = std::numeric_limits<double>::max();
+                        double max_x = std::numeric_limits<double>::lowest();
+                        double max_y = std::numeric_limits<double>::lowest();
+
+                        for (const auto& pt : img_corners) {
+                            min_x = std::min(min_x, pt.x());
+                            min_y = std::min(min_y, pt.y());
+                            max_x = std::max(max_x, pt.x());
+                            max_y = std::max(max_y, pt.y());
+                        }
+
+                        // 计算中心点和尺寸（已经是归一化坐标）
+                        w = max_x - min_x;
+                        h = max_y - min_y;
+                        x = (min_x + max_x) / 2.0;
+                        y = (min_y + max_y) / 2.0;
+
+                        // Clamp to [0,1]
+                        auto clamp01 = [](double v) { return std::clamp(v, 0.0, 1.0); };
+                        x = clamp01(x);
+                        y = clamp01(y);
+                        w = clamp01(w);
+                        h = clamp01(h);
+                    } else {
+                        // 透视变换失败时的fallback：使用简单的锚点边界框
+                        double min_x = std::min({p0.x(), p1.x(), p2.x(), p3.x()});
+                        double min_y = std::min({p0.y(), p1.y(), p2.y(), p3.y()});
+                        double max_x = std::max({p0.x(), p1.x(), p2.x(), p3.x()});
+                        double max_y = std::max({p0.y(), p1.y(), p2.y(), p3.y()});
+
+                        w = max_x - min_x;
+                        h = max_y - min_y;
+                        x = (min_x + max_x) / 2.0;
+                        y = (min_y + max_y) / 2.0;
+                    }
 
                     // 输出: color size cls x y w h x0 y0 x1 y1 x2 y2 x3 y3
                     line = QString("%1 %2 %3 %4 %5 %6 %7 %8 %9 %10 %11 %12 %13 %14 %15")
                         .arg(parts[0]).arg(parts[1]).arg(parts[2])
                         .arg(x).arg(y).arg(w).arg(h)
-                        .arg(x0).arg(y0).arg(x1).arg(y1).arg(x2).arg(y2).arg(x3).arg(y3);
+                        .arg(parts[3]).arg(parts[4])  // x0, y0
+                        .arg(parts[5]).arg(parts[6])  // x1, y1
+                        .arg(parts[7]).arg(parts[8])  // x2, y2
+                        .arg(parts[9]).arg(parts[10]); // x3, y3
                     fileModified = true;
                 }
             }
@@ -532,4 +597,10 @@ void SettingsDialog::performBatchConvert() {
 
     QMessageBox::information(this, "转换完成",
         QString("转换成功: %1 个文件\n已跳过: %2 个文件\n转换失败: %3 个文件").arg(successCount).arg(skipCount).arg(failCount));
+}
+
+// ---------- 数据集导入格式 ----------
+void SettingsDialog::setimportFormat(int index) {
+    controller::AppSettings::instance().setimportFormat(index);
+    update();
 }

@@ -25,7 +25,7 @@ SmartDetector::SmartDetector(
 
 SmartDetector::SmartDetector(QObject* parent)
     : QObject(parent) {
-    ai_detector_ = std::make_unique<ai::Detector>();
+    ai_detector_ = std::make_unique<ai::ONNXDetector>();
     ai_detector_->setupModel(controller::AppSettings::instance().assetsDir());
     mode = Mode::AI;
 }

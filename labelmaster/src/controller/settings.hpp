@@ -69,6 +69,7 @@ public:
     APP_SETTING_RW_FLOAT(vRate, Keys::kvRate, Def::kVRate)
     APP_SETTING_RW_STR(theme, Keys::kTheme, Def::kTheme)
     APP_SETTING_RW_INT(outputFormat, Keys::kOutputFormat, Def::kOutputFormat)
+    APP_SETTING_RW_INT(importFormat, Keys::kImportFormat, Def::kImportFormat)
 
 #undef APP_SETTING_RW_STR
 #undef APP_SETTING_RW_INT
@@ -97,6 +98,7 @@ private:
         static constexpr const char* kNumberClassifierThreshold = "detector/tradition/threshold";
         static constexpr const char* kTheme                     = "ui/theme";
         static constexpr const char* kOutputFormat              = "dataset/outputFormat";
+        static constexpr const char* kImportFormat              = "dataset/importFormat";
     };
     struct Def {
         static constexpr const char* kSaveDir             = "label";
@@ -110,6 +112,7 @@ private:
         static constexpr const float kVRate               = 4;
         static constexpr const char* kTheme               = "retro";
         static constexpr const int kOutputFormat          = 0;  // 0=pts-only(11), 1=xywh+pts(15)
+        static constexpr const int kImportFormat          = 0;  // 0=LabelMasterV2, 1=LabelMasterV1, 2=LabelMasterV3, 3=HITSZ, 4=UPC, 5=NMPU
     };
 
     QSettings settings_;

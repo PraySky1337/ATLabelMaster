@@ -15,6 +15,7 @@
 #include <csignal>
 #include <exception>
 #include <iostream>
+#include <mutex>
 
 #ifdef Q_OS_UNIX
 #include <unistd.h>
@@ -25,42 +26,15 @@ namespace labelmaster::util {
 
 namespace {
     CrashHandler* g_instance = nullptr;
+    std::once_flag g_instance_flag;
+    volatile std::sig_atomic_t g_crash_signal = 0;
 
-    // Signal handler for Unix systems
+    // Signal handler for Unix systems - only uses async-signal-safe functions
     void signalHandler(int signal) {
-        if (g_instance) {
-            QString sigName;
-            switch (signal) {
-                case SIGSEGV: sigName = "SIGSEGV"; break;
-                case SIGABRT: sigName = "SIGABRT"; break;
-                case SIGFPE:  sigName = "SIGFPE"; break;
-                case SIGILL:  sigName = "SIGILL"; break;
-                default:      sigName = QString::number(signal); break;
-            }
+        // Store signal for later processing (async-signal-safe)
+        g_crash_signal = signal;
 
-            QString message = QString("Fatal signal: %1").arg(sigName);
-            g_instance->logCrash(message);
-
-#ifdef Q_OS_UNIX
-            // Print stack trace
-            void* array[32];
-            size_t size = backtrace(array, 32);
-            char** strings = backtrace_symbols(array, size);
-
-            QFile logFile(g_instance->crashLogPath());
-            if (logFile.open(QIODevice::Append | QIODevice::Text)) {
-                QTextStream stream(&logFile);
-                stream << "\n=== Stack Trace ===\n";
-                for (size_t i = 0; i < size; i++) {
-                    stream << strings[i] << "\n";
-                }
-                stream << "===================\n";
-            }
-            free(strings);
-#endif
-        }
-
-        // Execute default signal handler
+        // Restore default handler and re-raise (async-signal-safe)
         std::signal(signal, SIG_DFL);
         std::raise(signal);
     }
@@ -90,14 +64,14 @@ namespace {
 }
 
 CrashHandler& CrashHandler::instance() {
-    if (!g_instance) {
+    std::call_once(g_instance_flag, []() {
         g_instance = new CrashHandler();
-    }
+    });
     return *g_instance;
 }
 
 CrashHandler::CrashHandler() {
-    // Check for previous crash
+    // Check for previous crash via lock file
     QString lockFile = lockFilePath();
     if (QFile::exists(lockFile)) {
         emit crashDetected("Previous session terminated abnormally");

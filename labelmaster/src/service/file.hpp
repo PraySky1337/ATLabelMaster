@@ -28,8 +28,8 @@ public:
 
 public slots:
     // === 打开 ===
-    void openFolderDialog(const DataSet& type = DataSet::LabelMaster2); // 弹框选目录
-    void importFrom(const QAction* action);                             // 导入其他数据集
+    void openFolderDialog(const DataSet& type = DataSet::Auto); // 弹框选目录
+    void importFrom(const QAction* action);                     // 导入其他数据集
     void openPaths(const QStringList&);                                 // 拖拽/命令行路径
     void openIndex(const QModelIndex&);                                 // 由文件树激活
 
@@ -52,11 +52,12 @@ signals:
     void rootChanged(const QModelIndex& proxyRoot);
     void currentIndexChanged(const QModelIndex& proxyIndex);
     void imageReady(const QImage& img);
-    void status(const QString& msg, int ms = 1500);
+    void status(const QString& msg, int ms = 3000);
     void busy(bool on);
 
     // === 打开图片时加载到的标注 ===
     void labelsLoaded(const QVector<Armor>& armors);
+    void labelTextChanged(const QString& labelText);  // 标签文件文本内容
     // ===统计信息获取==
     void StasGetted(const int& targetCount, const int& fileCount);
     // ===自动保存===

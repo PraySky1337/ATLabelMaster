@@ -111,6 +111,7 @@ private:
     // 编辑颜色和类别
     void promptEditSelectedInfo(bool isCurrent = false);
     void updateFitRect();
+    void updateBBoxFromCorners(Armor& a) const;  // 从角点计算归一化BBox（使用SVG透视变换）
     QRectF imageRectOnWidget() const;
     QPointF widgetToImage(const QPointF& p) const;
     QPointF imageToWidget(const QPointF& p) const;

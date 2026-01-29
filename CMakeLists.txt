@@ -34,8 +34,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${OpenCV_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE 
-    Qt6::Widgets 
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Qt6::Widgets
     Qt6::Core
     Qt6::Gui
     Qt6::Svg

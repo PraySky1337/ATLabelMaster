@@ -13,7 +13,6 @@ class QKeyEvent;
 class QDragEnterEvent;
 class QDropEvent;
 class QCloseEvent;
-class QStringListModel;
 QT_END_NAMESPACE
 
 namespace ui {
@@ -32,7 +31,6 @@ public:
 signals:
     // —— 用户输出（语义化）——
     void sigOpenFolderRequested();
-    void sigImportFolderRequested(const QAction* action);
     void sigSaveRequested();
     void sigPrevRequested();
     void sigNextRequested();
@@ -46,7 +44,7 @@ signals:
     void sigKeyCommand(const QString&);
     void sigStasUpdateRequested(const int& targetCount, const int& fileCount); // 统计信息输出
     // —— 类别相关输出 ——
-    void sigClassSelected(const QString& name); // 选中类别时发出
+    void sigLabelContentChanged(const QString& content); // 标签文件内容变化
     void sigStasGetted(const int& targetCount, const int& fileCount);
 
     // FILE：通知 service 侧刷新索引（可选但推荐）
@@ -61,14 +59,13 @@ public slots:
     void appendLog(const QString& line);
     void setFileModel(QAbstractItemModel* model);
     void setCurrentIndex(const QModelIndex& idx);
-    void setStatus(const QString& msg, int ms = 2000);
+    void setStatus(const QString& msg, int ms = 3000);
     void setBusy(bool on);
     void setUiEnabled(bool on);
     void setRoot(const QModelIndex& idx);
 
-    // —— 类别列表 ——
-    void setClassList(const QStringList& names);
-    void setCurrentClass(const QString& name); // 可选：代码里直接选中某类
+    // —— 标签内容查看器 ——
+    void setLabelContent(const QString& content);
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;
@@ -86,9 +83,8 @@ private:
     bool logTimestamp_    = true;
     bool dragDropEnabled_ = true;
 
-    // 类别
-    QStringListModel* clsModel_ = nullptr;
-    QString currentClass_;
+    // 当前选中的类别（用于键盘快捷键1-9选择）
+    QString currentClass_ = QStringLiteral("G");
 };
 
 } // namespace ui

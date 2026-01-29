@@ -1,5 +1,6 @@
 
-enum class DataSet : unsigned char { // 数据集格式
+enum class DataSet : unsigned char {
+    Auto = 255,  // Auto-detect from settings // 数据集格式
     LabelMaster = 0,
     LabelMaster2,                    // 默认格式 (11字段: color size cls pts)
     HITSZ,                           // 南工骁鹰
@@ -20,4 +21,5 @@ enum class DataSet : unsigned char { // 数据集格式
     NWPU, // 西北工业大学
     // color * 16 + size * 8 + class
     LabelMaster3,                    // 新增: 15字段 (color size cls xywh pts)
+    LabelMasterV4,                   // 新增: 13字段 (cls xywh pts) cls=color*size*num
 };

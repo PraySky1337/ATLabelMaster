@@ -1,5 +1,5 @@
 #pragma once
-#include "ai/detector.hpp"
+#include "ai/onnx_detector.hpp"
 #include <QImage>
 #include <QObject>
 #include <QVector>
@@ -44,5 +44,5 @@ public slots:
 private:
     Mode mode = Mode::AI;
     std::unique_ptr<rm_auto_aim::Detector> traditional_detector_;
-    std::unique_ptr<ai::Detector> ai_detector_;
+    std::unique_ptr<ai::ONNXDetector> ai_detector_;
 };

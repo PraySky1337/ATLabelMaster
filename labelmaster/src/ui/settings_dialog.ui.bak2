@@ -114,11 +114,6 @@
         </item>
         <item>
          <property name="text">
-          <string>LabelMasterV4 (13 fields)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
           <string>HITSZ</string>
          </property>
         </item>
@@ -142,11 +137,11 @@
         <property name="styleSheet">
          <string notr="true">color: #9ece6a; font-size: 10px;</string>
         </property>
-        </widget>
+   </item>
       </item>
+</item>
      </layout>
     </widget>
-   </item>
    <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
@@ -361,11 +356,6 @@
         <item>
          <property name="text">
           <string>Rect + Points (15 fields)</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Class + Rect + Points (13 fields)</string>
          </property>
         </item>
        </widget>

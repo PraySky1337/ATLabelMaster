@@ -11,11 +11,9 @@
 #include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLabel>
-#include <QListView>
 #include <QMimeData>
 #include <QPixmap>
-#include <QPlainTextEdit>
-#include <QStringListModel>
+#include <QTextEdit>
 #include <QTreeView>
 #include <QUrl>
 #include <qaction.h>
@@ -39,37 +37,31 @@ MainWindow::MainWindow(QWidget* parent)
     setupActions();
     wireButtonsToActions();
 
-    // 文件树的“激活”事件（双击/回车等）
+    // 文件树的"激活"事件（双击/回车等）
+    // Note: activated信号已经涵盖了doubleClicked，所以不需要单独连接doubleClicked
     if (auto* tv = ui_->file_tree_view) {
         connect(tv, &QTreeView::activated, this, &MainWindow::sigFileActivated);
-        connect(tv, &QTreeView::doubleClicked, this, &MainWindow::sigFileActivated);
         tv->setSelectionBehavior(QAbstractItemView::SelectRows);
         tv->setUniformRowHeights(true);
     }
 
-    // 类别列表：最小初始化 & 同步当前类别
-    clsModel_ = new QStringListModel(this);
-    if (ui_->list_view) {
-        ui_->list_view->setModel(clsModel_);
-        connect(
-            ui_->list_view->selectionModel(), &QItemSelectionModel::currentChanged, this,
-            [this](const QModelIndex& cur, const QModelIndex&) {
-                currentClass_ = clsModel_->data(cur, Qt::DisplayRole).toString();
-                emit sigClassSelected(currentClass_);
-            });
+    // 标签内容查看器：初始化为只读
+    if (auto* edit = ui_->label_content_edit) {
+        edit->setReadOnly(true);
     }
-    connect(this, &MainWindow::sigSaveRequested, ui_->label, &ImageCanvas::requestSave);
 
-    // 让画布知道当前选择的类别
-    connect(this, &MainWindow::sigClassSelected, this, [this](const QString& name) {
-        if (ui_->label)
-            ui_->label->setCurrentClass(name);
+    // 连接标签内容更新信号
+    connect(this, &MainWindow::sigLabelContentChanged, this, [this](const QString& content) {
+        if (ui_->label_content_edit)
+            ui_->label_content_edit->setPlainText(content);
     });
+
+    connect(this, &MainWindow::sigSaveRequested, ui_->label, &ImageCanvas::requestSave);
 
     // 智能标注
     connect(this, &MainWindow::sigSmartAnnotateRequested, ui_->label, &ImageCanvas::requestDetect);
 
-    statusBar()->showMessage(tr("Ready"), 1200);
+    statusBar()->showMessage(tr("Ready"), 3000);
 }
 
 MainWindow::~MainWindow() = default;
@@ -166,22 +158,9 @@ void MainWindow::setUiEnabled(bool on) {
         w->setEnabled(on);
 }
 
-void MainWindow::setClassList(const QStringList& names) {
-    if (!clsModel_)
-        return;
-    clsModel_->setStringList(names);
-    if (ui_->list_view && !names.isEmpty()) {
-        ui_->list_view->setCurrentIndex(clsModel_->index(0)); // 触发 sigClassSelected
-    }
-}
-
-void MainWindow::setCurrentClass(const QString& name) {
-    if (!clsModel_ || !ui_->list_view)
-        return;
-    const auto list = clsModel_->stringList();
-    const int row   = list.indexOf(name);
-    if (row >= 0)
-        ui_->list_view->setCurrentIndex(clsModel_->index(row));
+void MainWindow::setLabelContent(const QString& content) {
+    if (ui_->label_content_edit)
+        ui_->label_content_edit->setPlainText(content);
 }
 
 /* ---------------- 配置/事件 ---------------- */
@@ -208,11 +187,15 @@ void MainWindow::keyPressEvent(QKeyEvent* e) {
         return;
     }
 
-    // 数字键快速选类
-    if (e->key() >= Qt::Key_1 && e->key() <= Qt::Key_9 && clsModel_ && ui_->list_view) {
+    // 数字键快速选类 (1-9 对应 G,1,2,3,4,5,O,B 等)
+    if (e->key() >= Qt::Key_1 && e->key() <= Qt::Key_9) {
+        static const QStringList classes = {"G", "1", "2", "3", "4", "5", "O", "B", "9"};
         int idx = e->key() - Qt::Key_1;
-        if (idx < clsModel_->rowCount()) {
-            ui_->list_view->setCurrentIndex(clsModel_->index(idx));
+        if (idx < classes.size()) {
+            currentClass_ = classes[idx];
+            if (ui_->label)
+                ui_->label->setCurrentClass(currentClass_);
+            setStatus(tr("当前类别：%1").arg(currentClass_), 1000);
             e->accept();
             return;
         }
@@ -253,10 +236,8 @@ void MainWindow::keyPressEvent(QKeyEvent* e) {
         return;
     case Qt::Key_A: {
         QString cls = currentClass_;
-        if (cls.isEmpty() && clsModel_ && clsModel_->rowCount() > 0)
-            cls = clsModel_->data(clsModel_->index(0), Qt::DisplayRole).toString();
         if (cls.isEmpty())
-            cls = QStringLiteral("unknown");
+            cls = QStringLiteral("G");  // 默认类别
         setStatus(tr("开始标注：%1（拖一个矩形，然后拖拽角点精调，右键/ESC取消）").arg(cls), 2000);
         e->accept();
         return;
@@ -324,7 +305,7 @@ void MainWindow::setupActions() {
     connect(ui_->actionSmart, &QAction::triggered, this, &MainWindow::sigSmartAnnotateRequested);
     connect(ui_->actionStas, &QAction::triggered, this, &MainWindow::showStasDialog);
     connect(ui_->actionSettings, &QAction::triggered, this, &MainWindow::sigSettingsRequested);
-    connect(ui_->menuImport, &QMenu::triggered, this, &MainWindow::sigImportFolderRequested);
+
 }
 
 void MainWindow::wireButtonsToActions() {
