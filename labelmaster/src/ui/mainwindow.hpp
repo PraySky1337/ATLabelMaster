@@ -38,7 +38,9 @@ signals:
     void sigDeleteRequested();
     void sigSmartAnnotateRequested();
     void sigSettingsRequested();
+    void sigDatasetRequested();
     void sigGetStasRequested(int colorId, int classId, int sizeId);
+    void sigAnnotationFiltersChanged(int colorId, int classId, int sizeId);
     void sigFileActivated(const QModelIndex&);
     void sigDroppedPaths(const QStringList&);
     void sigKeyCommand(const QString&);
@@ -54,6 +56,7 @@ signals:
 public slots:
     // —— 外部输入（更新 UI）——
     void showSettingDialog();
+    void showDatasetDialog();
     void showStasDialog();
     void showImage(const QImage& img);
     void appendLog(const QString& line);
@@ -66,6 +69,9 @@ public slots:
 
     // —— 标签内容查看器 ——
     void setLabelContent(const QString& content);
+
+    // —— 标注过滤器 ——
+    void updateAnnotationFilters();
 
 protected:
     void keyPressEvent(QKeyEvent* e) override;

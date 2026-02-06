@@ -1,0 +1,18 @@
+#!/bin/bash
+# AppImage launcher for ATLabelMaster
+# Sets up the runtime environment for the AppImage
+
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+
+# Set library path
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${HERE}/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+
+# Set Qt plugin path
+export QT_PLUGIN_PATH="${HERE}/usr/plugins"
+
+# Set assets directory
+export LABELMASTER_ASSETS_DIR="${HERE}/usr/share/labelmaster/assets"
+
+# Launch the application
+exec "${HERE}/usr/bin/LabelMaster" "$@"

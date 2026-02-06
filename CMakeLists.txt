@@ -46,7 +46,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION /usr/bin
 )
-install(DIRECTORY resources/ DESTINATION /usr/share/${PROJECT_NAME}/resources)
-install(DIRECTORY assets/themes/ DESTINATION /usr/share/${PROJECT_NAME}/themes)
-install(DIRECTORY assets/icons/ DESTINATION /usr/share/${PROJECT_NAME}/icons)
-install(DIRECTORY assets/label/ DESTINATION /usr/share/${PROJECT_NAME}/label)
+# Install all assets to /usr/share/labelmaster/assets/ to maintain directory structure
+install(DIRECTORY assets/themes/ DESTINATION /usr/share/${PROJECT_NAME}/assets/themes)
+install(DIRECTORY assets/icons/ DESTINATION /usr/share/${PROJECT_NAME}/assets/icons)
+install(DIRECTORY assets/label/ DESTINATION /usr/share/${PROJECT_NAME}/assets/label)
+install(DIRECTORY assets/models/ DESTINATION /usr/share/${PROJECT_NAME}/assets/models)

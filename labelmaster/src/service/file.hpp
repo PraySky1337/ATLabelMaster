@@ -46,6 +46,9 @@ public slots:
     // === 获取统计信息 ==
     void getStas(int colorId, int classId, int sizeId);
 
+    // === 设置标注过滤器 ==
+    void setAnnotationFilters(int colorId, int classId, int sizeId);
+
 signals:
     // === 给 UI 的输出 ===
     void modelReady(QAbstractItemModel* proxyModel);
@@ -80,6 +83,7 @@ private:
     void tryRestoreLastVisited(); // 异步调用
     bool setProxyRoot(const QString& dir);
 
+public:
     // 标注 I/O（归一化支持）
     static QString labelFileForImage(const QString& imagePath);
     static bool writeLabelFile(
@@ -98,4 +102,9 @@ private:
     QString currentImagePath_;                                         // 当前图片绝对路径
     QSize currentImageSize_;                                           // 当前图片尺寸（归一化需要）
     DataSet currentDataSet = DataSet::LabelMaster2;
+
+    // Annotation filter state
+    int filterColorId_ = -1;
+    int filterClassId_ = -1;
+    int filterSizeId_ = -1;
 };

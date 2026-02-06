@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DatasetDialog</class>
+ <widget class="QDialog" name="DatasetDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>450</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>数据集管理</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <!-- Import Format Section -->
+   <item>
+    <widget class="QGroupBox" name="group_import_format">
+     <property name="title">
+      <string>数据集导入格式</string>
+     </property>
+     <layout class="QGridLayout" name="gridImportFormat">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_import_format">
+        <property name="text">
+         <string>导入格式:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="import_format_combo">
+        <item>
+         <property name="text">
+          <string>LabelMasterV2 (Native)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>LabelMasterV1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>LabelMasterV3 (15 fields)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>LabelMasterV4 (13 fields)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>HITSZ</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>UPC</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>NMPU</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLabel" name="label_import_tip">
+        <property name="text">
+         <string>选择格式后，点击主界面的"打开文件夹"导入数据集</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">color: #9ece6a; font-size: 10px;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Label Format / Batch Convert Section -->
+   <item>
+    <widget class="QGroupBox" name="group_label_format">
+     <property name="title">
+      <string>标签格式转换</string>
+     </property>
+     <layout class="QGridLayout" name="gridLabelFormat">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_format">
+        <property name="text">
+         <string>输出格式:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QComboBox" name="format_combo">
+        <item>
+         <property name="text">
+          <string>Points Only (11 fields)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Rect + Points (15 fields)</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Class + Rect + Points (13 fields)</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QPushButton" name="batch_convert_button">
+        <property name="text">
+         <string>批量转换当前目录</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Batch Replace Section -->
+   <item>
+    <widget class="QGroupBox" name="group_batch_replace">
+     <property name="title">
+      <string>批量替换标签</string>
+     </property>
+     <layout class="QGridLayout" name="gridBatchReplace">
+      <item row="0" column="0" colspan="4">
+       <widget class="QLabel" name="label_batch_tip">
+        <property name="text">
+         <string>将所有匹配的标签替换为目标标签</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="0">
+       <widget class="QLabel" name="label_src_color">
+        <property name="text">
+         <string>源颜色:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="1">
+       <widget class="QComboBox" name="src_color_combo">
+        <item>
+         <property name="text">
+          <string>All</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Blue</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Red</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Gray</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Purple</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="label_src_size">
+        <property name="text">
+         <string>源大小:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="3">
+       <widget class="QComboBox" name="src_size_combo">
+        <item>
+         <property name="text">
+          <string>All</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Small</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Big</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="label_src_class">
+        <property name="text">
+         <string>源类别:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QComboBox" name="src_class_combo">
+        <item>
+         <property name="text">
+          <string>G</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>2</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>3</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>4</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="2" column="2" colspan="2">
+       <widget class="QLabel" name="label_arrow">
+        <property name="text">
+         <string>↓ 替换为 ↓</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="label_dst_color">
+        <property name="text">
+         <string>目标颜色:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="dst_color_combo">
+        <item>
+         <property name="text">
+          <string>Blue</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Red</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Gray</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Purple</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="3" column="2">
+       <widget class="QLabel" name="label_dst_size">
+        <property name="text">
+         <string>目标大小:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="3">
+       <widget class="QComboBox" name="dst_size_combo">
+        <item>
+         <property name="text">
+          <string>Small</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Big</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="label_dst_class">
+        <property name="text">
+         <string>目标类别:</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QComboBox" name="dst_class_combo">
+        <item>
+         <property name="text">
+          <string>G</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>2</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>3</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>4</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>O</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>B</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="4" column="2" colspan="2">
+       <widget class="QPushButton" name="batch_replace_button">
+        <property name="text">
+         <string>执行替换</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0" colspan="4">
+       <widget class="QPlainTextEdit" name="batch_result_text">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="maximumHeight">
+         <number>100</number>
+        </property>
+        <property name="placeholderText">
+         <string>批量替换结果将在此显示</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+
+   <!-- Dialog Buttons -->
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="locale">
+      <locale language="Chinese" country="China"/>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::StandardButton::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>DatasetDialog</receiver>
+   <slot>accept()</slot>
+  </connection>
+ </connections>
+</ui>

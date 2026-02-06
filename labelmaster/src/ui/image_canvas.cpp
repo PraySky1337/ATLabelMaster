@@ -1099,7 +1099,11 @@ void ImageCanvas::promptEditSelectedInfo(bool isCurrent) {
     ui::InfoDialog* dialog = new ui::InfoDialog(this);
     connect(dialog, &ui::InfoDialog::InfoGetted, this, &ImageCanvas::ProcessInfoChanged);
     if (isCurrent) {
-        dialog->updateInfo(true);
+        // Load saved defaults
+        int defClassId = controller::AppSettings::instance().defaultClassId();
+        int defColorId = controller::AppSettings::instance().defaultColorId();
+        int defSize    = controller::AppSettings::instance().defaultSize();
+        dialog->updateInfo(true, defClassId, defColorId, defSize);
     } else {
         dialog->updateInfo(
             false, IdConvert::classToken2Id(dets_[selectedIndex_].cls),
@@ -1254,6 +1258,12 @@ void ImageCanvas::ProcessInfoChanged(
         currentColor_ = Color;
         currentSize_  = size;
         createNewDetection();
+
+        // Save as defaults for next annotation
+        controller::AppSettings::instance()
+            .setdefaultClassId(IdConvert::classToken2Id(EditedClass))
+            .setdefaultColorId(IdConvert::colorLetter2Id(Color))
+            .setdefaultSize(size);
     } else {
         setSelectedInfo(EditedClass.trimmed(), Color, size);
     }

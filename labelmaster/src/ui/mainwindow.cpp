@@ -2,6 +2,7 @@
 #include "logger/core.hpp"
 #include "ui/image_canvas.hpp"
 #include "ui/settings_dialog.hpp"
+#include "ui/dataset_dialog.hpp"
 #include "ui/stas_dialog.h"
 #include <QAction>
 #include <QApplication>
@@ -61,6 +62,23 @@ MainWindow::MainWindow(QWidget* parent)
     // 智能标注
     connect(this, &MainWindow::sigSmartAnnotateRequested, ui_->label, &ImageCanvas::requestDetect);
 
+    // 数据集管理
+    connect(this, &MainWindow::sigDatasetRequested, this, &MainWindow::showDatasetDialog);
+
+    // Setup annotation filters
+    if (auto* combo = ui_->colorFilterCombo) {
+        connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ui::MainWindow::updateAnnotationFilters);
+    }
+    if (auto* combo = ui_->classFilterCombo) {
+        connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ui::MainWindow::updateAnnotationFilters);
+    }
+    if (auto* combo = ui_->sizeFilterCombo) {
+        connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ui::MainWindow::updateAnnotationFilters);
+    }
+
     statusBar()->showMessage(tr("Ready"), 3000);
 }
 
@@ -69,6 +87,11 @@ MainWindow::~MainWindow() = default;
 /* ---------------- 外部输入（更新 UI） ---------------- */
 void MainWindow::showSettingDialog() {
     ui::SettingsDialog* dialog = new SettingsDialog(this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
+}
+void MainWindow::showDatasetDialog() {
+    ui::DatasetDialog* dialog = new DatasetDialog(this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }
@@ -294,6 +317,7 @@ void MainWindow::setupActions() {
     ensureAction(ui_->actionDelete, QKeySequence::Delete, tr("Delete"));
     ensureAction(ui_->actionSmart, QKeySequence(Qt::Key_Space), tr("Smart Annotate (Space)"));
     ensureAction(ui_->actionSettings, {}, tr("Settings"));
+    ensureAction(ui_->actionDataset, {}, tr("Dataset Management"));
     ensureAction(ui_->actionStas, QKeySequence(Qt::Key_F1), tr("Get STAS."));
 
     connect(ui_->actionOpen, &QAction::triggered, this, &MainWindow::sigOpenFolderRequested);
@@ -304,6 +328,7 @@ void MainWindow::setupActions() {
     connect(ui_->actionDelete, &QAction::triggered, this, &MainWindow::sigDeleteRequested);
     connect(ui_->actionSmart, &QAction::triggered, this, &MainWindow::sigSmartAnnotateRequested);
     connect(ui_->actionStas, &QAction::triggered, this, &MainWindow::showStasDialog);
+    connect(ui_->actionDataset, &QAction::triggered, this, &MainWindow::sigDatasetRequested);
     connect(ui_->actionSettings, &QAction::triggered, this, &MainWindow::sigSettingsRequested);
 
 }
@@ -317,4 +342,23 @@ void MainWindow::wireButtonsToActions() {
     connect(ui_->delete_button, &QPushButton::clicked, ui_->actionDelete, &QAction::trigger);
     connect(ui_->save_button, &QPushButton::clicked, ui_->actionSave, &QAction::trigger);
     connect(ui_->setttings_button, &QPushButton::clicked, ui_->actionSettings, &QAction::trigger);
+}
+
+void MainWindow::updateAnnotationFilters() {
+    int colorId = -1, classId = -1, sizeId = -1;
+
+    if (auto* combo = ui_->colorFilterCombo) {
+        int idx = combo->currentIndex();
+        if (idx > 0) colorId = idx - 1;  // -1=ALL, 0=Blue, 1=Red, 2=Gray, 3=Purple
+    }
+    if (auto* combo = ui_->classFilterCombo) {
+        int idx = combo->currentIndex();
+        if (idx > 0) classId = idx - 1;  // -1=ALL, 0=G, 1=1, 2=2, ...
+    }
+    if (auto* combo = ui_->sizeFilterCombo) {
+        int idx = combo->currentIndex();
+        if (idx > 0) sizeId = idx - 1;  // -1=ALL, 0=Small, 1=Big
+    }
+
+    emit sigAnnotationFiltersChanged(colorId, classId, sizeId);
 }

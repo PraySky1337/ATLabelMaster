@@ -84,20 +84,24 @@ ThemeManager& ThemeManager::instance() {
 
 ThemeManager::ThemeManager()
     : QObject()
-    , m_currentThemeId("retro_enhanced")
+    , m_currentThemeId("minecraft")
 {
     // Determine assets path
     QStringList paths = {
         QDir::currentPath() + "/assets/themes",
         QDir::currentPath() + "/../assets/themes",
+        QCoreApplication::applicationDirPath() + "/assets/themes",
         QCoreApplication::applicationDirPath() + "/../assets/themes",
         "/usr/share/labelmaster/themes",
         "/usr/local/share/labelmaster/themes"
     };
 
+    qDebug() << "Searching for themes in paths:" << paths;
+
     for (const QString& path : paths) {
         if (QDir(path).exists()) {
             m_assetsPath = path;
+            qDebug() << "Found themes directory:" << m_assetsPath;
             break;
         }
     }
@@ -105,10 +109,11 @@ ThemeManager::ThemeManager()
     if (m_assetsPath.isEmpty()) {
         m_assetsPath = QDir::currentPath() + "/assets/themes";
         QDir().mkpath(m_assetsPath);
+        qWarning() << "Themes directory not found, created:" << m_assetsPath;
     }
 
     discoverThemes();
-    loadTheme("retro_enhanced");
+    loadTheme("minecraft");
 }
 
 void ThemeManager::discoverThemes() {
@@ -213,19 +218,29 @@ QColor ThemeManager::color(const QString& key, const QColor& fallback) const {
 
 QFont ThemeManager::uiFont() const {
     QJsonObject fonts = m_currentTheme.value("fonts").toObject();
-    QString fontName = fonts.value("ui").toString("JetBrains Mono");
+    QString fontName = fonts.value("ui").toString("VT323, Minecraftia, Press Start 2P, monospace");
 
     QFont font(fontName);
-    font.setPixelSize(12);
+    if (!font.exactMatch()) {
+        // Fallback to system monospace if pixel fonts not available
+        font.setFamily("monospace");
+        font.setStyleHint(QFont::Monospace);
+    }
+    font.setPointSize(10);  // Use setPointSize instead of setPixelSize to avoid pointSize() returning 0
     return font;
 }
 
 QFont ThemeManager::monoFont() const {
     QJsonObject fonts = m_currentTheme.value("fonts").toObject();
-    QString fontName = fonts.value("mono").toString("JetBrains Mono");
+    QString fontName = fonts.value("mono").toString("VT323, Minecraftia, monospace");
 
     QFont font(fontName);
-    font.setPixelSize(11);
+    if (!font.exactMatch()) {
+        // Fallback to system monospace if pixel fonts not available
+        font.setFamily("monospace");
+        font.setStyleHint(QFont::Monospace);
+    }
+    font.setPointSize(9);  // Use setPointSize instead of setPixelSize to avoid pointSize() returning 0
     return font;
 }
 
@@ -272,17 +287,20 @@ QString ThemeManager::generateStyleSheet() const {
     const QString btnHover = color("button_hover").name();
     const QString btnPressed = color("button_pressed").name();
     const QString btnDisabled = color("button_disabled").name();
+    const QString shadowLight = color("button_shadow_light", primary).name();
+    const QString shadowDark = color("button_shadow_dark", border).name();
 
     const int btnBorder = dimension("button_border");
     const int panelBorder = dimension("panel_border");
     const int cornerRadius = dimension("corner_radius");
 
     // IMPORTANT: Exclude image-display classes to prevent color distortion
-    // We use :not() selector to exclude ImageCanvas and similar widgets
+    // Note: Qt CSS doesn't support property selectors like [image=true]
+    // We rely on the fact that ImageCanvas uses local styles and doesn't inherit global theme
 
-    // Global application styles (EXCLUDING image widgets)
-    css += "/* Global styles - excluding image widgets */\n";
-    css += QString("QWidget:not(ImageCanvas):not(QLabel[image=true]):not(QLabel[pixmap=true]) {\n");
+    // Global application styles
+    css += "/* Global styles */\n";
+    css += "QWidget {\n";
     css += QString("  font-family: %1;\n").arg(uiFont().family());
     css += QString("  font-size: %1pt;\n").arg(uiFont().pointSize());
     css += QString("  color: %1;\n").arg(text);
@@ -326,6 +344,53 @@ QString ThemeManager::generateStyleSheet() const {
     css += QString("  color: %1;\n").arg(textDim);
     css += "}\n\n";
 
+    // Minecraft theme specific styles - pixel bevel effect
+    if (m_currentThemeId == "minecraft") {
+        QString mcShadowLight = color("button_shadow_light", QColor(143, 207, 118)).name();
+        QString mcShadowDark = color("button_shadow_dark", QColor(58, 108, 46)).name();
+
+        css += "/* Minecraft Pixel Button Style */\n";
+        css += "QPushButton {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:0.51 %3, stop:1 %4);\n")
+            .arg(mcShadowLight).arg(primary).arg(primary).arg(mcShadowDark);
+        css += QString("  border: %1px solid;\n").arg(btnBorder);
+        css += QString("  border-color: %1 %2 %3 %4;\n")
+            .arg(mcShadowLight).arg(border).arg(border).arg(mcShadowDark);
+        css += QString("  border-radius: 0px;\n");
+        css += QString("  padding: 8px 16px;\n");
+        css += QString("  font-weight: bold;\n");
+        css += "}\n\n";
+
+        css += "QPushButton:hover {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:0.51 %3, stop:1 %4);\n")
+            .arg(btnHover).arg(btnHover).arg(btnPressed).arg(btnPressed);
+        css += "}\n\n";
+
+        css += "QPushButton:pressed {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:0.51 %3, stop:1 %4);\n")
+            .arg(mcShadowDark).arg(btnPressed).arg(btnPressed).arg(mcShadowLight);
+        css += QString("  border-color: %1 %2 %3 %4;\n")
+            .arg(shadowDark).arg(border).arg(border).arg(shadowLight);
+        css += QString("  padding-top: 10px;\n");
+        css += QString("  padding-left: 17px;\n");
+        css += "}\n\n";
+
+        // Minecraft style panels
+        css += "QGroupBox, QFrame {\n";
+        css += QString("  background-color: %1;\n").arg(panel);
+        css += QString("  border: %1px solid;\n").arg(panelBorder);
+        css += QString("  border-color: %1 %2 %3 %4;\n")
+            .arg(border).arg(shadowLight).arg(border).arg(shadowDark);
+        css += QString("  border-radius: 0px;\n");
+        css += QString("  margin-top: 12px;\n");
+        css += QString("  padding: 12px;\n");
+        css += QString("  font-weight: bold;\n");
+        css += "}\n\n";
+    }
+
     // QFrame
     css += "QFrame {\n";
     css += QString("  background-color: %1;\n").arg(panel);
@@ -338,11 +403,19 @@ QString ThemeManager::generateStyleSheet() const {
     css += "  background-color: transparent;\n";
     css += "}\n\n";
 
-    // QLabel - Exclude image labels
-    css += "QLabel:not([image=true]):not([pixmap=true]) {\n";
+    // QLabel - text labels
+    css += "/* QLabel - text labels */\n";
+    css += "QLabel {\n";
     css += QString("  color: %1;\n").arg(text);
     css += "  background-color: transparent;\n";
     css += "  border: none;\n";
+    css += "}\n\n";
+
+    // ImageCanvas - minimal styling to preserve image colors
+    css += "/* ImageCanvas - minimal styling */\n";
+    css += "ImageCanvas {\n";
+    css += "  border: 1px solid #555;\n";
+    css += "  background: #000;\n";
     css += "}\n\n";
 
     // QLineEdit
@@ -670,6 +743,80 @@ QString ThemeManager::generateStyleSheet() const {
     css += ".status-warning { color: " + warning + "; }\n";
     css += ".status-success { color: " + success + "; }\n";
     css += ".status-info { color: " + color("accent_info").name() + "; }\n";
+
+    // Minecraft theme enhancements
+    if (m_currentThemeId == "minecraft") {
+        QString mcShadowLight = color("button_shadow_light", QColor(143, 207, 118)).name();
+        QString mcShadowDark = color("button_shadow_dark", QColor(58, 108, 46)).name();
+        QString mcDirt = color("mc_dirt", QColor(92, 60, 34)).name();
+        QString mcStone = color("mc_stone", QColor(125, 125, 125)).name();
+        QString mcIron = color("mc_iron", QColor(198, 198, 198)).name();
+        QString mcGold = color("mc_gold", QColor(248, 184, 62)).name();
+        QString mcDiamond = color("mc_diamond", QColor(85, 255, 255)).name();
+
+        // Minecraft style scrollbars
+        css += "/* Minecraft Scrollbar */\n";
+        css += "QScrollBar:vertical {\n";
+        css += QString("  background: %1;\n").arg(mcStone);
+        css += QString("  border: %1px solid %2;\n").arg(panelBorder).arg(border);
+        css += "  width: 14px;\n";
+        css += "  border-radius: 0px;\n";
+        css += "}\n\n";
+
+        css += "QScrollBar::handle:vertical {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:1 %3);\n")
+            .arg(mcIron).arg(mcStone).arg(mcIron);
+        css += "  min-height: 30px;\n";
+        css += QString("  border: %1px solid %2;\n").arg(btnBorder).arg(border);
+        css += "  border-radius: 0px;\n";
+        css += "}\n\n";
+
+        css += "QScrollBar::handle:vertical:hover {\n";
+        css += QString("  background: %1;\n").arg(mcGold);
+        css += "}\n\n";
+
+        // Minecraft style inputs
+        css += "QLineEdit, QPlainTextEdit, QTextEdit {\n";
+        css += QString("  background-color: #000000;\n");
+        css += QString("  color: #ffffff;\n");
+        css += QString("  border: %1px solid;\n").arg(btnBorder);
+        css += QString("  border-color: %1 %2 %3 %4;\n")
+            .arg(mcShadowDark).arg(border).arg(border).arg(mcShadowLight);
+        css += QString("  border-radius: 0px;\n");
+        css += "  padding: 6px;\n";
+        css += QString("  font-family: \"VT323\", \"Minecraftia\", monospace;\n");
+        css += "}\n\n";
+
+        css += "QLineEdit:focus, QPlainTextEdit:focus, QTextEdit:focus {\n";
+        css += QString("  border-color: %1;\n").arg(mcDiamond);
+        css += "}\n\n";
+
+        // Minecraft style combo box
+        css += "QComboBox {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:0.51 %3, stop:1 %4);\n")
+            .arg(mcShadowLight).arg(panelAlt).arg(panelAlt).arg(mcShadowDark);
+        css += QString("  color: %1;\n").arg(text);
+        css += QString("  border: %1px solid;\n").arg(btnBorder);
+        css += QString("  border-color: %1 %2 %3 %4;\n")
+            .arg(mcShadowLight).arg(border).arg(border).arg(mcShadowDark);
+        css += QString("  border-radius: 0px;\n");
+        css += "  padding: 6px 12px;\n";
+        css += "}\n\n";
+
+        css += "QComboBox:hover {\n";
+        css += QString("  background: qlineargradient(x1:0, y1:0, x2:0, y2:1,\n");
+        css += QString("    stop:0 %1, stop:0.5 %2, stop:0.51 %3, stop:1 %4);\n")
+            .arg(mcIron).arg(panelAlt).arg(panelAlt).arg(mcStone);
+        css += "}\n\n";
+
+        // Add pixel font declaration for better rendering
+        css += "@font-face {\n";
+        css += "  font-family: 'MinecraftFont';\n";
+        css += "  src: local('VT323'), local('Minecraftia'), local('Press Start 2P'), monospace;\n";
+        css += "}\n\n";
+    }
 
     return css;
 }

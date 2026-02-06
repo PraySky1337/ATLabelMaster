@@ -1,0 +1,62 @@
+{
+  "name": "Minecraft",
+  "id": "minecraft",
+  "version": "2.0",
+  "description": "Minecraft-inspired pixel theme with blocky aesthetics",
+  "colors": {
+    "background": "#1a1a1a",
+    "panel": "#2d2d2d",
+    "panel_alternate": "#262626",
+    "text": "#ffffff",
+    "text_dim": "#808080",
+    "text_bright": "#ffffff",
+    "border": "#555555",
+    "border_light": "#6e6e6e",
+    "border_dark": "#1a1a1a",
+    "accent_primary": "#5fa848",
+    "accent_secondary": "#c6c6c6",
+    "accent_success": "#5fa848",
+    "accent_warning": "#f8b83e",
+    "accent_error": "#ff5555",
+    "accent_info": "#55ffff",
+    "button_hover": "#7cbd5d",
+    "button_pressed": "#4a8c38",
+    "button_disabled": "#3a3a3a",
+    "button_shadow_light": "#8fcf76",
+    "button_shadow_dark": "#3a6c2e",
+    "input_background": "#000000",
+    "input_text": "#ffffff",
+    "input_border": "#555555",
+    "input_focus": "#5fa848",
+    "selection": "#5fa848",
+    "selection_text": "#ffffff",
+    "link": "#55ffff",
+    "link_visited": "#ff55ff",
+    "mc_dirt": "#5c3c22",
+    "mc_stone": "#7d7d7d",
+    "mc_grass": "#5fa848",
+    "mc_iron": "#c6c6c6",
+    "mc_gold": "#f8b83e",
+    "mc_diamond": "#55ffff"
+  },
+  "fonts": {
+    "ui": "VT323, Minecraftia, Press Start 2P, Courier New, monospace",
+    "mono": "VT323, Minecraftia, monospace"
+  },
+  "dimensions": {
+    "button_border": 3,
+    "panel_border": 3,
+    "corner_radius": 0,
+    "spacing_small": 4,
+    "spacing_medium": 8,
+    "spacing_large": 12,
+    "icon_size": 16
+  },
+  "effects": {
+    "pixel_scaling": true,
+    "scanlines": false,
+    "animation_speed": "none",
+    "pixel_borders": true,
+    "bevel_buttons": true
+  }
+}

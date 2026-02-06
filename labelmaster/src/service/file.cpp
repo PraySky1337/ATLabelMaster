@@ -63,7 +63,17 @@ static const QStringList kImgExt = {"*.png", "*.jpg", "*.jpeg", "*.bmp",
 
 class ImageFilterProxy : public QSortFilterProxyModel {
 public:
-    using QSortFilterProxyModel::QSortFilterProxyModel;
+    explicit ImageFilterProxy(QObject* parent = nullptr)
+        : QSortFilterProxyModel(parent),
+          colorFilter_(-1), classFilter_(-1), sizeFilter_(-1) {}
+
+    void setFilters(int colorId, int classId, int sizeId) {
+        colorFilter_ = colorId;
+        classFilter_ = classId;
+        sizeFilter_ = sizeId;
+        beginFilterChange();
+        endFilterChange();
+    }
 
 protected:
     bool filterAcceptsRow(int srcRow, const QModelIndex& srcParent) const override {
@@ -78,12 +88,86 @@ protected:
         if (fsm->isDir(idx))
             return true;     // 保留目录
         const QString name = fsm->fileName(idx).toLower();
+        bool isImage = false;
         for (const auto& pat : kImgExt) {
-            if (name.endsWith(pat.mid(1)))
-                return true; // endsWith(".png")
+            if (name.endsWith(pat.mid(1))) {
+                isImage = true;
+                break;
+            }
+        }
+        if (!isImage)
+            return false;
+
+        // If no annotation filters active, accept all images
+        if (colorFilter_ == -1 && classFilter_ == -1 && sizeFilter_ == -1)
+            return true;
+
+        // Check if image has matching annotations
+        return hasMatchingAnnotation(fsm->filePath(idx));
+    }
+
+private:
+    bool hasMatchingAnnotation(const QString& imagePath) const {
+        QString labelPath = FileService::labelFileForImage(imagePath);
+        if (!QFile::exists(labelPath))
+            return false;
+
+        QFile f(labelPath);
+        if (!f.open(QIODevice::ReadOnly | QIODevice::Text))
+            return false;
+
+        QTextStream ts(&f);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+        ts.setEncoding(QStringConverter::Utf8);
+#else
+        ts.setCodec("UTF-8");
+#endif
+
+        while (!ts.atEnd()) {
+            QString raw = ts.readLine();
+            int hash = raw.indexOf('#');
+            if (hash >= 0)
+                raw = raw.left(hash);
+            const QString line = raw.trimmed();
+            if (line.isEmpty())
+                continue;
+
+            const QStringList t = line.simplified().split(' ');
+            if (t.size() != 11 && t.size() != 13 && t.size() != 15)
+                continue;
+
+            bool ok = true;
+            auto toInt = [&](int i) -> int {
+                bool o = false;
+                int v = t.at(i).toInt(&o);
+                ok &= o;
+                return v;
+            };
+
+            int colorId = toInt(0);
+            int sizeId = toInt(1);
+            int classId = toInt(2);
+            if (!ok)
+                continue;
+
+            // Check if this annotation matches filters
+            bool matches = true;
+            if (colorFilter_ != -1 && colorId != colorFilter_)
+                matches = false;
+            if (classFilter_ != -1 && classId != classFilter_)
+                matches = false;
+            if (sizeFilter_ != -1 && sizeId != sizeFilter_)
+                matches = false;
+
+            if (matches)
+                return true;
         }
         return false;
     }
+
+    int colorFilter_;
+    int classFilter_;
+    int sizeFilter_;
 };
 } // namespace
 
@@ -1191,4 +1275,16 @@ void FileService::getStas(int colorId, int classId, int sizeId) {
         }
     }
     emit StasGetted(targetCount, fileCount);
+}
+
+// 设置标注过滤器
+void FileService::setAnnotationFilters(int colorId, int classId, int sizeId) {
+    filterColorId_ = colorId;
+    filterClassId_ = classId;
+    filterSizeId_ = sizeId;
+
+    auto* filterProxy = static_cast<ImageFilterProxy*>(proxy_);
+    if (filterProxy) {
+        filterProxy->setFilters(colorId, classId, sizeId);
+    }
 }

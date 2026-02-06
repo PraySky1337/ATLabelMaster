@@ -70,6 +70,9 @@ public:
     APP_SETTING_RW_STR(theme, Keys::kTheme, Def::kTheme)
     APP_SETTING_RW_INT(outputFormat, Keys::kOutputFormat, Def::kOutputFormat)
     APP_SETTING_RW_INT(importFormat, Keys::kImportFormat, Def::kImportFormat)
+    APP_SETTING_RW_INT(defaultClassId, Keys::kDefaultClassId, Def::kDefaultClassId)
+    APP_SETTING_RW_INT(defaultColorId, Keys::kDefaultColorId, Def::kDefaultColorId)
+    APP_SETTING_RW_INT(defaultSize, Keys::kDefaultSize, Def::kDefaultSize)
 
 #undef APP_SETTING_RW_STR
 #undef APP_SETTING_RW_INT
@@ -99,6 +102,9 @@ private:
         static constexpr const char* kTheme                     = "ui/theme";
         static constexpr const char* kOutputFormat              = "dataset/outputFormat";
         static constexpr const char* kImportFormat              = "dataset/importFormat";
+        static constexpr const char* kDefaultClassId            = "annotation/defaultClassId";
+        static constexpr const char* kDefaultColorId            = "annotation/defaultColorId";
+        static constexpr const char* kDefaultSize               = "annotation/defaultSize";
     };
     struct Def {
         static constexpr const char* kSaveDir             = "label";
@@ -113,6 +119,9 @@ private:
         static constexpr const char* kTheme               = "retro";
         static constexpr const int kOutputFormat          = 0;  // 0=pts-only(11), 1=xywh+pts(15)
         static constexpr const int kImportFormat          = 0;  // 0=LabelMasterV2, 1=LabelMasterV1, 2=LabelMasterV3, 3=HITSZ, 4=UPC, 5=NMPU
+        static constexpr const int kDefaultClassId        = 0;  // G
+        static constexpr const int kDefaultColorId        = 2;  // Gray
+        static constexpr const int kDefaultSize           = 0;  // Small
     };
 
     QSettings settings_;
