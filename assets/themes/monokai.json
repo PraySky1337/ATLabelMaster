@@ -1,0 +1,59 @@
+{
+  "name": "Monokai",
+  "id": "monokai",
+  "version": "1.0",
+  "description": "Classic Monokai theme with vibrant syntax colors",
+  "colors": {
+    "background": "#272822",
+    "panel": "#3e3d32",
+    "panel_alternate": "#323229",
+    "text": "#f8f8f2",
+    "text_dim": "#75715e",
+    "text_bright": "#ffffff",
+    "border": "#49483e",
+    "border_light": "#5e5d52",
+    "border_dark": "#1e1f1a",
+    "accent_primary": "#a6e22e",
+    "accent_secondary": "#ae81ff",
+    "accent_success": "#a6e22e",
+    "accent_warning": "#fd971f",
+    "accent_error": "#f92672",
+    "accent_info": "#66d9ef",
+    "button_hover": "#be84f8",
+    "button_pressed": "#8ec336",
+    "button_disabled": "#49483e",
+    "input_background": "#1e1f1a",
+    "input_text": "#f8f8f2",
+    "input_border": "#49483e",
+    "input_focus": "#a6e22e",
+    "selection": "#49483e",
+    "selection_text": "#f8f8f2",
+    "link": "#66d9ef",
+    "link_visited": "#ae81ff",
+    "monokai_pink": "#f92672",
+    "monokai_green": "#a6e22e",
+    "monokai_orange": "#fd971f",
+    "monokai_yellow": "#e6db74",
+    "monokai_blue": "#66d9ef",
+    "monokai_purple": "#ae81ff",
+    "monokai_brown": "#75715e"
+  },
+  "fonts": {
+    "ui": "Fira Code, JetBrains Mono, Consolas, monospace",
+    "mono": "Fira Code, JetBrains Mono, Consolas, monospace"
+  },
+  "dimensions": {
+    "button_border": 2,
+    "panel_border": 2,
+    "corner_radius": 4,
+    "spacing_small": 4,
+    "spacing_medium": 8,
+    "spacing_large": 16,
+    "icon_size": 16
+  },
+  "effects": {
+    "pixel_scaling": false,
+    "scanlines": false,
+    "animation_speed": "medium"
+  }
+}
